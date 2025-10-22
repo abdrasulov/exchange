@@ -21,11 +21,12 @@ function LogoutButton() {
 }
 
 export function UserPage() {
-    const {user} = useTurnkey();
-    console.log(user);
+    const {user, wallets} = useTurnkey();
+
     return (
-        <div className="flex items-center justify-center h-screen bg-gray-50">
-            <div className="bg-white rounded-2xl shadow-lg p-8 w-80 text-center">
+        <div className="flex items-center justify-center min-h-screen bg-gray-50 p-6 space-x-6">
+            {/* User Profile Card */}
+            <div className="bg-white rounded-2xl shadow-lg p-8 w-80">
                 <h2 className="text-2xl font-bold mb-2 text-gray-800">User Profile</h2>
                 <div className="mt-4 text-left">
                     <p className="text-gray-600">
@@ -37,6 +38,41 @@ export function UserPage() {
                 </div>
                 <LogoutButton/>
             </div>
+
+            {/* Wallets Card */}
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+                <h3 className="text-xl font-semibold mb-4 text-gray-800">Wallets</h3>
+
+                {wallets && wallets.length > 0 ? (
+                    <div className="space-y-4">
+                        {wallets.map((wallet) => (
+                            <div
+                                key={wallet.walletName}
+                                className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition"
+                            >
+                                <div className="text-lg font-medium text-gray-800 mb-2">
+                                    {wallet.walletName}
+                                </div>
+                                <div className="space-y-1">
+                                    {wallet.accounts.map((account) => (
+                                        <div
+                                            key={account.address}
+                                            className="text-sm font-mono text-gray-600 break-all">
+                                            <div className="font-semibold text-gray-700">
+                                              {account.addressFormat}:
+                                            </div>
+                                            {account.address}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-gray-500">No wallets found.</p>
+                )}
+            </div>
+
         </div>
     );
 }

@@ -1,4 +1,5 @@
 import {useTurnkey} from "@turnkey/react-wallet-kit";
+import {CreateWalletButton} from "@/app/createWalletButton";
 
 function LogoutButton() {
     const {logout} = useTurnkey();
@@ -69,7 +70,10 @@ export function UserPage() {
                         ))}
                     </div>
                 ) : (
-                    <p className="text-gray-500">No wallets found.</p>
+                    <div>
+                        <p className="text-gray-500">No wallets found.</p>
+                        <CreateWalletButton/>
+                    </div>
                 )}
             </div>
 

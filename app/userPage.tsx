@@ -1,5 +1,6 @@
 import {useTurnkey} from "@turnkey/react-wallet-kit";
 import {CreateWalletButton} from "@/app/createWalletButton";
+import Link from "next/link";
 
 function LogoutButton() {
     const {logout} = useTurnkey();
@@ -21,6 +22,17 @@ function LogoutButton() {
     );
 }
 
+function VerifyButton() {
+    return (
+        <Link
+            href="/verify"
+            className="w-full py-2 text-center border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition"
+        >
+            Complete KYC
+        </Link>
+    );
+}
+
 export function UserPage() {
     const {user, wallets} = useTurnkey();
 
@@ -37,7 +49,10 @@ export function UserPage() {
                         <span className="font-semibold text-gray-800">Email:</span> {user?.userEmail}
                     </p>
                 </div>
-                <LogoutButton/>
+                <div className="mt-6 flex flex-col space-y-3">
+                    <VerifyButton/>
+                    <LogoutButton/>
+                </div>
             </div>
 
             {/* Wallets Card */}

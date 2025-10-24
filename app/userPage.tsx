@@ -22,10 +22,10 @@ function LogoutButton() {
     );
 }
 
-function VerifyButton() {
+function VerifyButton({userId}: { userId: string }) {
     return (
         <Link
-            href="/verify"
+            href={`/verify?userId=${userId}`}
             className="w-full py-2 text-center border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition"
         >
             Complete KYC
@@ -36,6 +36,12 @@ function VerifyButton() {
 export function UserPage() {
     const {user, wallets} = useTurnkey();
 
+    if (!user) {
+        return (
+            <div>Loading</div>
+        )
+    }
+
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50 p-6 space-x-6">
             {/* User Profile Card */}
@@ -43,14 +49,14 @@ export function UserPage() {
                 <h2 className="text-2xl font-bold mb-2 text-gray-800">User Profile</h2>
                 <div className="mt-4 text-left">
                     <p className="text-gray-600">
-                        <span className="font-semibold text-gray-800">Username:</span> {user?.userName}
+                        <span className="font-semibold text-gray-800">Username:</span> {user.userName}
                     </p>
                     <p className="text-gray-600 mt-2">
-                        <span className="font-semibold text-gray-800">Email:</span> {user?.userEmail}
+                        <span className="font-semibold text-gray-800">Email:</span> {user.userEmail}
                     </p>
                 </div>
                 <div className="mt-6 flex flex-col space-y-3">
-                    <VerifyButton/>
+                    <VerifyButton userId={user.userId}/>
                     <LogoutButton/>
                 </div>
             </div>

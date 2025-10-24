@@ -6,8 +6,22 @@ axios.interceptors.request.use(createSignature, function (error) {
     return Promise.reject(error);
 })
 
-export default async function Verify() {
-    const externalUserId = "johndoeu";
+function PageError({message}: { message: string }) {
+    return (
+        <p className="text-center text-red-500 mt-20">{message}</p>
+    )
+}
+
+export default async function Verify(
+    {searchParams}: { searchParams: { userId?: string } }
+) {
+    const userId = searchParams.userId
+
+    if (!userId) {
+        return <PageError message={"No userId set"} />;
+    }
+
+    const externalUserId = userId;
     const levelName = "id-only";
 
     let token: string | null = null;
@@ -21,7 +35,7 @@ export default async function Verify() {
     }
 
     if (!token) {
-        return <p className="text-center text-red-500 mt-20">Failed to load verification, {error}</p>;
+        return <PageError message={`Failed to load verification, ${error}`} />;
     }
 
     return <SumsubWidget accessToken={token} />;

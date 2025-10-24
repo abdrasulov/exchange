@@ -1,6 +1,8 @@
 import {useTurnkey} from "@turnkey/react-wallet-kit";
 import {CreateWalletButton} from "@/app/createWalletButton";
 import Link from "next/link";
+import axios from "axios";
+import {useState} from "react";
 
 function LogoutButton() {
     const {logout} = useTurnkey();
@@ -35,6 +37,7 @@ function VerifyButton({userId}: { userId: string }) {
 
 export function UserPage() {
     const {user, wallets} = useTurnkey();
+    const [verified, setVerified] = useState<boolean | null>(null);
 
     if (!user) {
         return (
@@ -42,8 +45,18 @@ export function UserPage() {
         )
     }
 
+    axios.get(`/api/verification/?userId=${user.userId}`)
+        .then((response) => {
+            console.log(response.data.verified);
+            setVerified(response.data.verified);
+        })
+        .catch((error) => {
+            console.error(error);
+            setVerified(false)
+        })
+
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-50 p-6 space-x-6">
+        <div className="flex justify-center min-h-screen bg-gray-50 p-6 space-x-6">
             {/* User Profile Card */}
             <div className="bg-white rounded-2xl shadow-lg p-8 w-80">
                 <h2 className="text-2xl font-bold mb-2 text-gray-800">User Profile</h2>
@@ -56,14 +69,28 @@ export function UserPage() {
                     </p>
                 </div>
                 <div className="mt-6 flex flex-col space-y-3">
-                    <VerifyButton userId={user.userId}/>
                     <LogoutButton/>
+                </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-lg p-8 w-80">
+                <h2 className="text-2xl font-bold mb-2 text-gray-800">Verification</h2>
+                <div className="mt-4 text-left">
+                    <p className="text-gray-600">
+                        <span className="font-semibold text-gray-800">Status: </span>
+                        {verified === true ? <span>Account Verified</span> : null}
+                        {verified === false ? <span>Account Not Verified</span> : null}
+                        {verified === null ? <span>Loading...</span> : null}
+                    </p>
+                </div>
+                <div className="mt-6 flex flex-col space-y-3">
+                    {verified === false ? <VerifyButton userId={user.userId}/> : null}
                 </div>
             </div>
 
             {/* Wallets Card */}
             <div className="bg-white rounded-2xl shadow-lg p-8">
-                <h3 className="text-xl font-semibold mb-4 text-gray-800">Wallets</h3>
+                <h2 className="text-2xl font-bold mb-2 text-gray-800">Wallets</h2>
 
                 {wallets && wallets.length > 0 ? (
                     <div className="space-y-4">

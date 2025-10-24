@@ -54,6 +54,7 @@ function DeleteAccountButton() {
 function VerifyButton({userId}: { userId: string }) {
     return (
         <Link
+            target="_blank"
             href={`/verify?userId=${userId}`}
             className="w-full py-2 text-center border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition"
         >
@@ -101,23 +102,8 @@ export function UserPage() {
                 </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-lg p-8 w-80">
-                <h2 className="text-2xl font-bold mb-2 text-gray-800">Verification</h2>
-                <div className="mt-4 text-left">
-                    <p className="text-gray-600">
-                        <span className="font-semibold text-gray-800">Status: </span>
-                        {verified === true ? <span>Account Verified</span> : null}
-                        {verified === false ? <span>Account Not Verified</span> : null}
-                        {verified === null ? <span>Loading...</span> : null}
-                    </p>
-                </div>
-                <div className="mt-6 flex flex-col space-y-3">
-                    {verified === false ? <VerifyButton userId={user.userId}/> : null}
-                </div>
-            </div>
-
             {/* Wallets Card */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
+            <div className="bg-white rounded-2xl shadow-lg p-8 min-w-80">
                 <h2 className="text-2xl font-bold mb-2 text-gray-800">Wallets</h2>
 
                 {wallets && wallets.length > 0 ? (
@@ -151,6 +137,21 @@ export function UserPage() {
                         <CreateWalletButton/>
                     </div>
                 )}
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-lg p-8 w-80">
+                <h2 className="text-2xl font-bold mb-2 text-gray-800">Verification</h2>
+                <div className="mt-4 text-left">
+                    <p className="text-gray-600">
+                        <span className="font-semibold text-gray-800">Status: </span>
+                        {verified === true ? <span>Account Verified</span> : null}
+                        {verified === false ? <span>Account Not Verified</span> : null}
+                        {verified === null ? <span>Loading...</span> : null}
+                    </p>
+                </div>
+                <div className="mt-6 flex flex-col space-y-3">
+                    {verified === false ? <VerifyButton userId={user.userId}/> : null}
+                </div>
             </div>
 
         </div>

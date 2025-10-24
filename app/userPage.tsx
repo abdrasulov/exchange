@@ -24,6 +24,33 @@ function LogoutButton() {
     );
 }
 
+function DeleteAccountButton() {
+    const {logout, deleteSubOrganization} = useTurnkey();
+
+    const handleDeleteAccount = async () => {
+        try {
+            if (window.confirm('Are you sure you want to perform this action?')) {
+                // User confirmed, proceed with the action
+                await deleteSubOrganization({deleteWithoutExport: true});
+                await logout();
+                // Handle successful logout (e.g., redirect to login page)
+                console.log('Action confirmed!');
+            } else {
+                // User canceled
+                console.log('Action canceled.');
+            }
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
+    };
+
+    return (
+        <button onClick={handleDeleteAccount} className="mt-6 w-full py-2 bg-red-500 text-white rounded-lg hover:bg-red-700 transition">
+            Delete Account
+        </button>
+    );
+}
+
 function VerifyButton({userId}: { userId: string }) {
     return (
         <Link
@@ -70,6 +97,7 @@ export function UserPage() {
                 </div>
                 <div className="mt-6 flex flex-col space-y-3">
                     <LogoutButton/>
+                    <DeleteAccountButton/>
                 </div>
             </div>
 

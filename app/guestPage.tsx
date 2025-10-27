@@ -5,7 +5,7 @@ export function GuestPage() {
     return (
         <div
             className="flex items-center justify-center h-screen">
-            <button onClick={handleLogin}
+            <button onClick={() => handleLogin()}
                     className="px-6 py-3 text-lg font-semibold text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-700 transition">
                 Log in
             </button>

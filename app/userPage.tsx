@@ -130,6 +130,12 @@ export function UserPage() {
                                 </div>
                             </div>
                         ))}
+
+
+                        <Link href={"swap"}>
+                            Swap
+                        </Link>
+
                     </div>
                 ) : (
                     <div>

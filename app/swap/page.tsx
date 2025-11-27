@@ -42,11 +42,27 @@ const TOKENS: Token[] = [
     },
 ];
 
+const chainNames: Record<string, string> = {
+    ETH: "Ethereum",
+    SOL: "Solana",
+};
+
+const getChainName = (chain: string) => chainNames[chain] ?? chain;
+
 export default function Swap() {
     const [fromToken, setFromToken] = useState(TOKENS[0].ticker);
     const [toToken, setToToken] = useState(TOKENS[1].ticker);
     const [amount, setAmount] = useState("");
     const [status, setStatus] = useState<string | null>(null);
+
+    const fromTokenMeta = useMemo(
+        () => TOKENS.find((token) => token.ticker === fromToken),
+        [fromToken]
+    );
+    const toTokenMeta = useMemo(
+        () => TOKENS.find((token) => token.ticker === toToken),
+        [toToken]
+    );
 
     // Simple mock rate: pretend 1 FROM = rate TO; purely UI feedback
     const mockRate = useMemo(() => {
@@ -89,7 +105,7 @@ export default function Swap() {
                         >
                             {TOKENS.map((token) => (
                                 <option key={token.identifier} value={token.ticker}>
-                                    {token.ticker}
+                                    {token.ticker} • {getChainName(token.chain)}
                                 </option>
                             ))}
                         </select>
@@ -103,6 +119,9 @@ export default function Swap() {
                             className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2 text-right text-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
                         />
                     </div>
+                    <p className="text-xs text-slate-500">
+                        Chain: {fromTokenMeta ? getChainName(fromTokenMeta.chain) : "—"}
+                    </p>
                 </label>
 
                 <label className="block space-y-2 text-sm text-slate-900">
@@ -114,10 +133,13 @@ export default function Swap() {
                     >
                         {TOKENS.map((token) => (
                             <option key={token.identifier} value={token.ticker}>
-                                {token.ticker}
+                                {token.ticker} • {getChainName(token.chain)}
                             </option>
                         ))}
                     </select>
+                    <p className="text-xs text-slate-500">
+                        Chain: {toTokenMeta ? getChainName(toTokenMeta.chain) : "—"}
+                    </p>
                 </label>
 
                 <div className="rounded-xl bg-blue-50 p-3 text-sm text-slate-700">

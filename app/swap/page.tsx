@@ -2,15 +2,57 @@
 
 import { FormEvent, useMemo, useState } from "react";
 
-const TOKENS = [
-    { symbol: "USDC", name: "USD Coin" },
-    { symbol: "ETH", name: "Ethereum" },
-    { symbol: "WBTC", name: "Wrapped BTC" },
+type Token = {
+    chain: string;
+    chainId: string;
+    ticker: string;
+    identifier: string;
+    name: string;
+    decimals: number;
+    logoURI: string;
+    shortCode: string;
+    coingeckoId: string;
+};
+
+const TOKENS: Token[] = [
+    {
+        chain: "BSC",
+        chainId: "56",
+        ticker: "BNB",
+        identifier: "BSC.BNB",
+        name: "BNB",
+        decimals: 18,
+        logoURI: "https://storage.googleapis.com/token-list-swapkit/images/bsc.bnb.png",
+        shortCode: "s",
+        coingeckoId: "binancecoin",
+    },
+    {
+        chain: "ETH",
+        chainId: "1",
+        ticker: "ETH",
+        identifier: "ETH.ETH",
+        name: "Ethereum",
+        decimals: 18,
+        logoURI: "https://storage.googleapis.com/token-list-swapkit/images/eth.eth.png",
+        shortCode: "s",
+        coingeckoId: "ethereum",
+    },
+    {
+        chain: "POL",
+        chainId: "137",
+        ticker: "USDC",
+        identifier: "POL.USDC",
+        name: "USD Coin",
+        decimals: 6,
+        logoURI: "https://storage.googleapis.com/token-list-swapkit/images/pol.usdc.png",
+        shortCode: "s",
+        coingeckoId: "usd-coin",
+    },
 ];
 
 export default function Swap() {
-    const [fromToken, setFromToken] = useState(TOKENS[0].symbol);
-    const [toToken, setToToken] = useState(TOKENS[1].symbol);
+    const [fromToken, setFromToken] = useState(TOKENS[0].ticker);
+    const [toToken, setToToken] = useState(TOKENS[1].ticker);
     const [amount, setAmount] = useState("");
     const [status, setStatus] = useState<string | null>(null);
 
@@ -54,8 +96,8 @@ export default function Swap() {
                             className="w-32 rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
                         >
                             {TOKENS.map((token) => (
-                                <option key={token.symbol} value={token.symbol}>
-                                    {token.symbol}
+                                <option key={token.identifier} value={token.ticker}>
+                                    {token.ticker}
                                 </option>
                             ))}
                         </select>
@@ -79,8 +121,8 @@ export default function Swap() {
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
                     >
                         {TOKENS.map((token) => (
-                            <option key={token.symbol} value={token.symbol}>
-                                {token.symbol}
+                            <option key={token.identifier} value={token.ticker}>
+                                {token.ticker}
                             </option>
                         ))}
                     </select>

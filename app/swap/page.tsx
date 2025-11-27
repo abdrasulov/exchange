@@ -4,49 +4,41 @@ import { FormEvent, useMemo, useState } from "react";
 
 type Token = {
     chain: string;
+    address?: string;
     chainId: string;
     ticker: string;
     identifier: string;
+    symbol?: string;
     name: string;
     decimals: number;
     logoURI: string;
-    shortCode: string;
     coingeckoId: string;
 };
 
 const TOKENS: Token[] = [
     {
-        chain: "BSC",
-        chainId: "56",
-        ticker: "BNB",
-        identifier: "BSC.BNB",
-        name: "BNB",
-        decimals: 18,
-        logoURI: "https://storage.googleapis.com/token-list-swapkit/images/bsc.bnb.png",
-        shortCode: "s",
-        coingeckoId: "binancecoin",
+        "chain": "ETH",
+        "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "chainId": "1",
+        "ticker": "USDT",
+        "identifier": "ETH.USDT-0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "symbol": "USDT-0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "name": "Tether",
+        "decimals": 6,
+        "logoURI": "https://storage.googleapis.com/token-list-swapkit/images/eth.usdt-0xdac17f958d2ee523a2206206994597c13d831ec7.png",
+        "coingeckoId": "tether"
     },
     {
-        chain: "ETH",
-        chainId: "1",
-        ticker: "ETH",
-        identifier: "ETH.ETH",
-        name: "Ethereum",
-        decimals: 18,
-        logoURI: "https://storage.googleapis.com/token-list-swapkit/images/eth.eth.png",
-        shortCode: "s",
-        coingeckoId: "ethereum",
-    },
-    {
-        chain: "POL",
-        chainId: "137",
-        ticker: "USDC",
-        identifier: "POL.USDC",
-        name: "USD Coin",
-        decimals: 6,
-        logoURI: "https://storage.googleapis.com/token-list-swapkit/images/pol.usdc.png",
-        shortCode: "s",
-        coingeckoId: "usd-coin",
+        "chain": "SOL",
+        "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "chainId": "solana",
+        "ticker": "USDC",
+        "identifier": "SOL.USDC-EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "symbol": "USDC-EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "name": "USDC",
+        "decimals": 6,
+        "logoURI": "https://storage.googleapis.com/token-list-swapkit/images/sol.usdc-epjfwdd5aufqssqem2qn1xzybapc8g4weggkzwytdt1v.png",
+        "coingeckoId": "usd-coin"
     },
 ];
 

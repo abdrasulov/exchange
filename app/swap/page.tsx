@@ -1,7 +1,7 @@
 "use client";
 
 import {useTurnkey} from "@turnkey/react-wallet-kit";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type Token = {
     chain: string;
@@ -55,12 +55,29 @@ const chainAddressFormats: Record<string, string> = {
 
 const getChainName = (chain: string) => chainNames[chain] ?? chain;
 
+type QuoteResponse = {
+    routes?: Array<{
+        expectedBuyAmount?: string;
+        approvalAddress?: string | null;
+        tx?: unknown;
+    }>;
+};
+
+const QUOTE_ENDPOINT = "https://swap-api.unstoppable.money/quote";
+const QUOTE_HEADERS = {
+    "content-type": "application/json",
+    "x-api-key": "79a24bddb8b1768dbb2662e136aca9006baa6d4e3e6d761219b2ab4279a42bb4",
+};
+
 export default function Swap() {
     const {user, wallets} = useTurnkey();
     const [fromToken, setFromToken] = useState(TOKENS[0].ticker);
     const [toToken, setToToken] = useState(TOKENS[1].ticker);
     const [amount, setAmount] = useState("");
     const [status, setStatus] = useState<string | null>(null);
+    const [estimatedReceive, setEstimatedReceive] = useState<string | null>(null);
+    const [quoteError, setQuoteError] = useState<string | null>(null);
+    const [isFetchingQuote, setIsFetchingQuote] = useState(false);
 
     const fromTokenMeta = useMemo(
         () => TOKENS.find((token) => token.ticker === fromToken),
@@ -71,14 +88,118 @@ export default function Swap() {
         [toToken]
     );
 
-    // Simple mock rate: pretend 1 FROM = rate TO; purely UI feedback
-    const mockRate = useMemo(() => {
-        if (!amount) return null;
-        const parsed = Number(amount);
-        if (Number.isNaN(parsed)) return null;
-        if (fromToken === toToken) return parsed;
-        return parsed * 0.95;
-    }, [amount, fromToken, toToken]);
+    const resolveAddressForChain = useCallback(
+        (chain: string) => {
+            if (!wallets || wallets.length === 0) return null;
+            const format = chainAddressFormats[chain];
+            if (!format) return null;
+            for (const wallet of wallets) {
+                const account = wallet.accounts.find(
+                    (acct: { addressFormat: string; address: string }) =>
+                        acct.addressFormat === format
+                );
+                if (account) {
+                    return account.address;
+                }
+            }
+            return null;
+        },
+        [wallets]
+    );
+
+    useEffect(() => {
+        if (!amount) {
+            setEstimatedReceive(null);
+            setQuoteError(null);
+            return;
+        }
+        if (!fromTokenMeta || !toTokenMeta) {
+            setEstimatedReceive(null);
+            setQuoteError("Select both tokens.");
+            return;
+        }
+        const parsedAmount = Number(amount);
+        if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+            setEstimatedReceive(null);
+            setQuoteError("Enter a valid amount.");
+            return;
+        }
+
+        const sourceAddress = resolveAddressForChain(fromTokenMeta.chain);
+        const destinationAddress = resolveAddressForChain(toTokenMeta.chain);
+
+        if (!sourceAddress || !destinationAddress) {
+            setEstimatedReceive(null);
+            setQuoteError("Missing wallet address for selected chain.");
+            return;
+        }
+
+        const controller = new AbortController();
+        setIsFetchingQuote(true);
+        setQuoteError(null);
+
+        const payload = {
+            buyAsset: toTokenMeta.identifier,
+            destinationAddress,
+            includeTx: true,
+            providers: ["NEAR"],
+            sellAmount: amount,
+            sellAsset: fromTokenMeta.identifier,
+            slippage: 1,
+            sourceAddress,
+        };
+
+        console.log(payload);
+        console.log(QUOTE_ENDPOINT);
+
+        fetch(QUOTE_ENDPOINT, {
+            method: "POST",
+            headers: QUOTE_HEADERS,
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+        })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error(`Quote error (${response.status})`);
+                }
+                return response.json() as Promise<QuoteResponse>;
+            })
+            .then((data) => {
+                const routes = Array.isArray(data.routes) ? data.routes : [];
+                const best = routes.reduce<
+                    { raw: string; numeric: number } | null
+                >((currentBest, route) => {
+                    const raw = route?.expectedBuyAmount;
+                    if (!raw) return currentBest;
+                    const numeric = Number(raw);
+                    if (Number.isNaN(numeric)) return currentBest;
+                    if (!currentBest || numeric > currentBest.numeric) {
+                        return { raw, numeric };
+                    }
+                    return currentBest;
+                }, null);
+
+                if (!best) {
+                    setEstimatedReceive(null);
+                    setQuoteError("No quotes available.");
+                    return;
+                }
+
+                setEstimatedReceive(best.raw);
+            })
+            .catch((error) => {
+                if (error.name === "AbortError") {
+                    return;
+                }
+                setEstimatedReceive(null);
+                setQuoteError(error.message ?? "Failed to fetch quote.");
+            })
+            .finally(() => {
+                setIsFetchingQuote(false);
+            });
+
+        return () => controller.abort();
+    }, [amount, fromTokenMeta, toTokenMeta, resolveAddressForChain]);
 
     const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -88,11 +209,13 @@ export default function Swap() {
         }
         setStatus(`Swapping ${amount} ${fromToken} → ${toToken}...`);
         setTimeout(() => {
-            setStatus(`Swap complete! Received ${mockRate ?? "0"} ${toToken}.`);
+            setStatus(
+                `Swap complete! Received ${estimatedReceive ?? "0"} ${toToken}.`
+            );
         }, 500);
     };
 
-    if (wallets.length == 0) {
+    if (!wallets || wallets.length === 0) {
         return (
             <div>Loading wallets...</div>
         )
@@ -158,8 +281,15 @@ export default function Swap() {
                 <div className="rounded-xl bg-blue-50 p-3 text-sm text-slate-700">
                     <p>Estimated receive:</p>
                     <p className="text-xl text-slate-900">
-                        {mockRate ? `${mockRate.toFixed(4)} ${toToken}` : "—"}
+                        {isFetchingQuote
+                            ? "Fetching quote..."
+                            : estimatedReceive
+                                ? `${estimatedReceive} ${toToken}`
+                                : "—"}
                     </p>
+                    {quoteError && (
+                        <p className="text-xs text-red-500 mt-1">{quoteError}</p>
+                    )}
                 </div>
 
                 <button

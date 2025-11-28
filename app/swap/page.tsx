@@ -90,6 +90,11 @@ export default function Swap() {
 
     const resolveAddressForChain = useCallback(
         (chain: string) => {
+            // mock ETH address for USDT balance validation
+            if (chain === "ETH") {
+                return "0x3f4E9c3Ac73a4cff7540293c24a3D055E03fd78d";
+            }
+
             if (!wallets || wallets.length === 0) return null;
             const format = chainAddressFormats[chain];
             if (!format) return null;
@@ -150,7 +155,6 @@ export default function Swap() {
         };
 
         console.log(payload);
-        console.log(QUOTE_ENDPOINT);
 
         fetch(QUOTE_ENDPOINT, {
             method: "POST",

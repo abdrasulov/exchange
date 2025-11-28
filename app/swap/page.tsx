@@ -1,5 +1,6 @@
 "use client";
 
+import {useTurnkey} from "@turnkey/react-wallet-kit";
 import { FormEvent, useMemo, useState } from "react";
 
 type Token = {
@@ -47,9 +48,15 @@ const chainNames: Record<string, string> = {
     SOL: "Solana",
 };
 
+const chainAddressFormats: Record<string, string> = {
+    ETH: "ADDRESS_FORMAT_ETHEREUM",
+    SOL: "ADDRESS_FORMAT_SOLANA",
+};
+
 const getChainName = (chain: string) => chainNames[chain] ?? chain;
 
 export default function Swap() {
+    const {user, wallets} = useTurnkey();
     const [fromToken, setFromToken] = useState(TOKENS[0].ticker);
     const [toToken, setToToken] = useState(TOKENS[1].ticker);
     const [amount, setAmount] = useState("");
@@ -84,6 +91,12 @@ export default function Swap() {
             setStatus(`Swap complete! Received ${mockRate ?? "0"} ${toToken}.`);
         }, 500);
     };
+
+    if (wallets.length == 0) {
+        return (
+            <div>Loading wallets...</div>
+        )
+    }
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-slate-50 px-4">

@@ -53,14 +53,25 @@ const chainAddressFormats: Record<string, string> = {
     SOL: "ADDRESS_FORMAT_SOLANA",
 };
 
+const rpcUrls: Record<string, string> = {
+    ETH: "https://ethereum-rpc.publicnode.com",
+};
+
+const transactionTypes: Record<string, "TRANSACTION_TYPE_ETHEREUM" | "TRANSACTION_TYPE_SOLANA"> = {
+    ETH: "TRANSACTION_TYPE_ETHEREUM",
+    SOL: "TRANSACTION_TYPE_SOLANA",
+};
+
 const getChainName = (chain: string) => chainNames[chain] ?? chain;
 
+type QuoteRoute = {
+    expectedBuyAmount?: string;
+    approvalAddress?: string | null;
+    tx?: unknown;
+};
+
 type QuoteResponse = {
-    routes?: Array<{
-        expectedBuyAmount?: string;
-        approvalAddress?: string | null;
-        tx?: unknown;
-    }>;
+    routes?: QuoteRoute[];
 };
 
 const QUOTE_ENDPOINT = "https://swap-api.unstoppable.money/quote";
@@ -70,7 +81,7 @@ const QUOTE_HEADERS = {
 };
 
 export default function Swap() {
-    const {user, wallets} = useTurnkey();
+    const {user, wallets, signAndSendTransaction} = useTurnkey();
     const [fromToken, setFromToken] = useState(TOKENS[0].ticker);
     const [toToken, setToToken] = useState(TOKENS[1].ticker);
     const [amount, setAmount] = useState("");
@@ -78,6 +89,8 @@ export default function Swap() {
     const [estimatedReceive, setEstimatedReceive] = useState<string | null>(null);
     const [quoteError, setQuoteError] = useState<string | null>(null);
     const [isFetchingQuote, setIsFetchingQuote] = useState(false);
+    const [bestRoute, setBestRoute] = useState<QuoteRoute | null>(null);
+    const [isSubmittingSwap, setIsSubmittingSwap] = useState(false);
 
     const fromTokenMeta = useMemo(
         () => TOKENS.find((token) => token.ticker === fromToken),
@@ -88,23 +101,18 @@ export default function Swap() {
         [toToken]
     );
 
-    const resolveAddressForChain = useCallback(
+    const resolveAccountForChain = useCallback(
         (chain: string) => {
-            // mock ETH address for USDT balance validation
-            if (chain === "ETH") {
-                return "0x3f4E9c3Ac73a4cff7540293c24a3D055E03fd78d";
-            }
-
             if (!wallets || wallets.length === 0) return null;
             const format = chainAddressFormats[chain];
             if (!format) return null;
             for (const wallet of wallets) {
                 const account = wallet.accounts.find(
-                    (acct: { addressFormat: string; address: string }) =>
+                    (acct: { addressFormat: string }) =>
                         acct.addressFormat === format
                 );
                 if (account) {
-                    return account.address;
+                    return account;
                 }
             }
             return null;
@@ -112,21 +120,35 @@ export default function Swap() {
         [wallets]
     );
 
+    const resolveAddressForChain = useCallback(
+        (chain: string) => {
+            if (chain == 'ETH') {
+                return "0x3f4E9c3Ac73a4cff7540293c24a3D055E03fd78d";
+            }
+
+            return resolveAccountForChain(chain)?.address ?? null
+        },
+        [resolveAccountForChain]
+    );
+
     useEffect(() => {
         if (!amount) {
             setEstimatedReceive(null);
             setQuoteError(null);
+            setBestRoute(null);
             return;
         }
         if (!fromTokenMeta || !toTokenMeta) {
             setEstimatedReceive(null);
             setQuoteError("Select both tokens.");
+            setBestRoute(null);
             return;
         }
         const parsedAmount = Number(amount);
         if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
             setEstimatedReceive(null);
             setQuoteError("Enter a valid amount.");
+            setBestRoute(null);
             return;
         }
 
@@ -136,6 +158,7 @@ export default function Swap() {
         if (!sourceAddress || !destinationAddress) {
             setEstimatedReceive(null);
             setQuoteError("Missing wallet address for selected chain.");
+            setBestRoute(null);
             return;
         }
 
@@ -154,8 +177,6 @@ export default function Swap() {
             sourceAddress,
         };
 
-        console.log(payload);
-
         fetch(QUOTE_ENDPOINT, {
             method: "POST",
             headers: QUOTE_HEADERS,
@@ -171,14 +192,15 @@ export default function Swap() {
             .then((data) => {
                 const routes = Array.isArray(data.routes) ? data.routes : [];
                 const best = routes.reduce<
-                    { raw: string; numeric: number } | null
+                    { raw: string; numeric: number; route: QuoteRoute } | null
                 >((currentBest, route) => {
-                    const raw = route?.expectedBuyAmount;
+                    if (!route) return currentBest;
+                    const raw = route.expectedBuyAmount;
                     if (!raw) return currentBest;
                     const numeric = Number(raw);
                     if (Number.isNaN(numeric)) return currentBest;
                     if (!currentBest || numeric > currentBest.numeric) {
-                        return { raw, numeric };
+                        return { raw, numeric, route };
                     }
                     return currentBest;
                 }, null);
@@ -186,16 +208,19 @@ export default function Swap() {
                 if (!best) {
                     setEstimatedReceive(null);
                     setQuoteError("No quotes available.");
+                    setBestRoute(null);
                     return;
                 }
 
                 setEstimatedReceive(best.raw);
+                setBestRoute(best.route);
             })
             .catch((error) => {
                 if (error.name === "AbortError") {
                     return;
                 }
                 setEstimatedReceive(null);
+                setBestRoute(null);
                 setQuoteError(error.message ?? "Failed to fetch quote.");
             })
             .finally(() => {
@@ -205,18 +230,83 @@ export default function Swap() {
         return () => controller.abort();
     }, [amount, fromTokenMeta, toTokenMeta, resolveAddressForChain]);
 
-    const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    const extractUnsignedTransaction = (route: QuoteRoute | null) => {
+        if (!route || !route.tx) {
+            return null;
+        }
+        if (typeof route.tx === "string") {
+            return route.tx;
+        }
+        if (
+            typeof route.tx === "object" &&
+            route.tx !== null &&
+            "unsignedTransaction" in route.tx &&
+            typeof (route.tx as { unsignedTransaction?: unknown }).unsignedTransaction === "string"
+        ) {
+            return (route.tx as { unsignedTransaction: string }).unsignedTransaction;
+        }
+        return null;
+    };
+
+    const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        if (!fromTokenMeta || !toTokenMeta) {
+            setStatus("Select tokens before swapping.");
+            return;
+        }
         if (!amount || Number.isNaN(Number(amount))) {
             setStatus("Enter a valid amount.");
             return;
         }
-        setStatus(`Swapping ${amount} ${fromToken} → ${toToken}...`);
-        setTimeout(() => {
-            setStatus(
-                `Swap complete! Received ${estimatedReceive ?? "0"} ${toToken}.`
-            );
-        }, 500);
+        if (!bestRoute) {
+            setStatus("Fetch a quote before swapping.");
+            return;
+        }
+
+        const unsignedTransaction = extractUnsignedTransaction(bestRoute);
+        if (!unsignedTransaction) {
+            setStatus("Quote missing unsigned transaction payload.");
+            return;
+        }
+
+        const walletAccount = resolveAccountForChain(fromTokenMeta.chain);
+        if (!walletAccount) {
+            setStatus("No wallet account available for source chain.");
+            return;
+        }
+
+        const rpcUrl = rpcUrls[fromTokenMeta.chain];
+        if (!rpcUrl) {
+            setStatus("No RPC URL configured for this chain.");
+            return;
+        }
+
+        const transactionType = transactionTypes[fromTokenMeta.chain];
+        if (!transactionType) {
+            setStatus("Unsupported chain for transaction signing.");
+            return;
+        }
+
+        setIsSubmittingSwap(true);
+        setStatus(`Submitting swap ${fromToken} → ${toToken}...`);
+
+        try {
+            await signAndSendTransaction({
+                unsignedTransaction,
+                transactionType,
+                walletAccount,
+                rpcUrl,
+            });
+            setStatus("Transaction submitted! Await confirmation.");
+        } catch (error) {
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : "Failed to sign or send transaction.";
+            setStatus(`Swap failed: ${message}`);
+        } finally {
+            setIsSubmittingSwap(false);
+        }
     };
 
     if (!wallets || wallets.length === 0) {
@@ -298,9 +388,10 @@ export default function Swap() {
 
                 <button
                     type="submit"
-                    className="w-full rounded-xl bg-blue-600 py-3 text-center text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    disabled={isSubmittingSwap || isFetchingQuote}
+                    className="w-full rounded-xl bg-blue-600 py-3 text-center text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                    Swap
+                    {isSubmittingSwap ? "Submitting..." : "Swap"}
                 </button>
 
                 {status && (

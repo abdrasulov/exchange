@@ -1,5 +1,5 @@
 import {NextRequest} from "next/server";
-import {Balance} from "@/app/balance";
+import {Balance} from "@/app/types";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams

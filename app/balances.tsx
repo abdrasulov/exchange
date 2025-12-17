@@ -2,7 +2,7 @@
 
 import {useEffect, useState} from "react";
 import {WalletAccount} from "@turnkey/core";
-import {Balance} from "@/app/balance";
+import {Balance} from "@/app/types";
 
 import axios from "axios";
 

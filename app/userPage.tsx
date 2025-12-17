@@ -3,6 +3,7 @@ import {CreateWalletButton} from "@/app/createWalletButton";
 import Link from "next/link";
 import axios from "axios";
 import {useState} from "react";
+import {Balances} from "@/app/balances";
 
 function LogoutButton() {
     const {logout} = useTurnkey();
@@ -125,6 +126,7 @@ export function UserPage() {
                                               {account.addressFormat}:
                                             </div>
                                             {account.address}
+                                            <Balances account={account}/>
                                         </div>
                                     ))}
                                 </div>

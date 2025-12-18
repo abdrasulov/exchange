@@ -1,7 +1,7 @@
 import {NextRequest} from "next/server";
 import {Balance} from "@/app/types";
 import {Alchemy, Network} from "alchemy-sdk";
-import {getNativeToken, getSupportedTokens} from "@/app/getSupportedTokens";
+import {getNativeToken, getSupportedTokens} from "@/app/tokens";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams

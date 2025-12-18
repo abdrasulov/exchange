@@ -1,97 +1,76 @@
 import {NextRequest} from "next/server";
 import {Balance} from "@/app/types";
+import {Alchemy, Network} from "alchemy-sdk";
+import {getNativeToken, getSupportedTokens} from "@/app/getSupportedTokens";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const address = searchParams.get('address')
     const addressFormat = searchParams.get('addressFormat')
 
+    if (address == null || addressFormat == null) {
+        return Response.json([])
+    }
+
+    let network
+    if (addressFormat == "ADDRESS_FORMAT_ETHEREUM") {
+        network = Network.ETH_MAINNET;
+    }
+
+    if (network === undefined) {
+        return Response.json([])
+    }
+
+    const alchemy = new Alchemy({
+        apiKey: process.env.ALCHEMY_API_KEY,
+        network: network,
+        connectionInfoOverrides: {
+            skipFetchSetup: true,
+        }
+    });
+
     const balances: Balance[] = [];
 
-    if (addressFormat == "ADDRESS_FORMAT_ETHEREUM") {
-        balances.push({
-            symbol: "ETH",
-            name: "Ethereum",
-            balance: "500.12341234"
-        });
+    try {
+        const nativeToken = getNativeToken(addressFormat);
+        if (nativeToken) {
+            // ETH balance
+            const balanceWei = await alchemy.core.getBalance(address);
+            const balanceEth = Number(balanceWei) / Math.pow(10, Number(nativeToken.decimals));
+            balances.push({
+                id: nativeToken.symbol,
+                symbol: nativeToken.symbol,
+                name: nativeToken.name,
+                balance: balanceEth.toFixed(nativeToken.decimals),
+            })
+        }
 
-        balances.push({
-            symbol: "USDT",
-            name: "Tether",
-            balance: "123.00123452"
-        });
+        const tokens = getSupportedTokens(addressFormat);
+        if (tokens.length > 0) {
+            const contractAddresses = tokens.map((token: any) => token.contractAddress);
+            // ERC-20 token balances
+            const {tokenBalances} = await alchemy.core.getTokenBalances(
+                address,
+                contractAddresses
+            );
+
+            for (const token of tokens) {
+                const tokenBalance = tokenBalances.find(balance => balance.contractAddress === token.contractAddress);
+                const balanceString = tokenBalance?.tokenBalance ?? "0";
+
+                const balance = Number(balanceString) / Math.pow(10, Number(token.decimals));
+
+                balances.push({
+                    id: token.contractAddress,
+                    symbol: token.symbol,
+                    name: token.name,
+                    balance: balance.toFixed(token.decimals),
+                });
+            }
+        }
+    } catch (e) {
+        console.error(e);
     }
 
     return Response.json(balances)
 }
-
-// const alchemy = new Alchemy({
-//     apiKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
-//     network: Network.ETH_MAINNET,
-// });
-//
-//  useEffect(() => {
-//     const fetchBalances = async () => {
-//       if (account.addressFormat !== "ADDRESS_FORMAT_ETHEREUM") {
-//         return;
-//       }
-//
-//       if (!account.address) {
-//         return;
-//       }
-//
-//       if (!process.env.NEXT_PUBLIC_ALCHEMY_API_KEY) {
-//         setError("Alchemy API key is not configured.");
-//         return;
-//       }
-//
-//       setLoading(true);
-//       setError(null);
-//
-//       try {
-//         // ETH balance
-//         const balanceWei = await alchemy.core.getBalance(account.address);
-//         const balanceEth = Number(balanceWei) / 1e18;
-//         setEthBalance(balanceEth.toFixed(6));
-//
-//         // ERC-20 token balances
-//         const { tokenBalances } = await alchemy.core.getTokenBalances(
-//           account.address
-//         );
-//
-//         const nonZeroTokens = tokenBalances.filter(
-//           (token) => token.tokenBalance && token.tokenBalance !== "0"
-//         );
-//
-//         const detailedTokens: TokenBalance[] = [];
-//
-//         for (const token of nonZeroTokens) {
-//           if (!token.contractAddress || !token.tokenBalance) continue;
-//
-//           const metadata = await alchemy.core.getTokenMetadata(
-//             token.contractAddress
-//           );
-//
-//           const decimals = metadata.decimals ?? 18;
-//           const balance =
-//             Number(token.tokenBalance) / Math.pow(10, Number(decimals));
-//
-//           detailedTokens.push({
-//             contractAddress: token.contractAddress,
-//             symbol: metadata.symbol || "",
-//             name: metadata.name || "",
-//             balance: balance.toFixed(6),
-//           });
-//         }
-//
-//         setTokenBalances(detailedTokens);
-//       } catch (e) {
-//         console.error(e);
-//         setError("Failed to load balances.");
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-//
-//     fetchBalances();
-//   }, [account.address, account.addressFormat]);

@@ -39,10 +39,6 @@ export function Balances(props: { account: WalletAccount }) {
 
     return (
         <div className="space-y-4">
-            <div className="text-sm text-gray-500 break-all">
-                <span className="font-semibold">Address:</span> {account.address}
-            </div>
-
             {loading && <div className="text-sm text-gray-500">Loading balances...</div>}
 
             {error && <div className="text-sm text-red-500">{error}</div>}

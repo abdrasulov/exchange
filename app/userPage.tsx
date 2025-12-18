@@ -114,18 +114,11 @@ export function UserPage() {
                                 key={wallet.walletName}
                                 className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition"
                             >
-                                <div className="text-lg font-medium text-gray-800 mb-2">
-                                    {wallet.walletName}
-                                </div>
                                 <div className="space-y-1">
                                     {wallet.accounts.map((account) => (
                                         <div
                                             key={account.address}
                                             className="text-sm font-mono text-gray-600 break-all">
-                                            <div className="font-semibold text-gray-700">
-                                              {account.addressFormat}:
-                                            </div>
-                                            {account.address}
                                             <Balances account={account}/>
                                         </div>
                                     ))}

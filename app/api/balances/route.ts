@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
                 id: nativeToken.symbol,
                 symbol: nativeToken.symbol,
                 name: nativeToken.name,
-                balance: balanceEth.toFixed(nativeToken.decimals),
+                balance: balanceEth,
             })
         }
 
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
                     id: token.contractAddress,
                     symbol: token.symbol,
                     name: token.name,
-                    balance: balance.toFixed(token.decimals),
+                    balance: balance,
                 });
             }
         }

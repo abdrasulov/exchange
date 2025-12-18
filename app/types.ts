@@ -2,7 +2,7 @@ export type Balance = {
     id: string;
     symbol: string;
     name: string;
-    balance: string;
+    balance: number;
 };
 
 export type Token = {

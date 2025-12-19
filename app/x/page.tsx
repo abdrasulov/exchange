@@ -2,8 +2,11 @@
 import MainLayout from "@/components/MainLayout";
 import Sidebar from "@/components/Sidebar";
 import MainContent from "@/components/MainContent";
+import {useTurnkey} from "@turnkey/react-wallet-kit";
 
 export default function Index() {
+  const {user} = useTurnkey();
+
   return (
     <MainLayout>
       <header className="mb-10 items-center justify-between flex">
@@ -20,8 +23,12 @@ export default function Index() {
         </div>
       </header>
       <div className="lg:grid-cols-3 grid gap-8">
-        <Sidebar />
-        <MainContent />
+        {user && (
+          <>
+            <Sidebar user={user}/>
+            <MainContent />
+          </>
+        )}
       </div>
     </MainLayout>
   );

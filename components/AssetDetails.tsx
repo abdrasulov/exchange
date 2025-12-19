@@ -1,42 +1,60 @@
 'use client';
 import AssetCard from "@/components/AssetCard";
+import {useEffect, useState} from "react";
+import {Balance} from "@/app/types";
+import axios from "axios";
+import {WalletAccount} from "@turnkey/core";
 
-export default function AssetDetails() {
+interface AssetDetailsProps {
+  account: WalletAccount
+}
+
+export default function AssetDetails({account}: AssetDetailsProps) {
+  const [balances, setBalances] = useState<Balance[]>([]);
+
+  const address = account.address;
+  const addressFormat = account.addressFormat;
+
+  useEffect(() => {
+    const fetchBalances = async () => {
+      // if (!account.address) {
+      //   return;
+      // }
+      //
+      // setLoading(true);
+      // setError(null);
+      //
+      try {
+        const response = await axios.get(`/api/balances/?address=${address}&addressFormat=${addressFormat}`);
+
+        setBalances(response.data as Balance[]);
+      } catch (e) {
+        console.error(e);
+        // setError("Failed to load balances.");
+      } finally {
+        // setLoading(false);
+      }
+    };
+
+    fetchBalances();
+  }, [address, addressFormat])
+
+
   return (
     <div className="space-y-4">
-      <AssetCard
-        name="Bitcoin"
-        code="BTC"
-        amount="0.4521 BTC"
-        value="≈ $19,342.12"
-        bgColor="bg-orange-100"
-        textColor="text-orange-600"
-        darkBgColor="dark:bg-orange-900/30"
-        darkTextColor="dark:text-orange-500"
-        svgComment="SVG4"
-      />
-      <AssetCard
-        name="Ethereum"
-        code="ETH"
-        amount="4.102 ETH"
-        value="≈ $8,450.00"
-        bgColor="bg-indigo-100"
-        textColor="text-indigo-600"
-        darkBgColor="dark:bg-indigo-900/30"
-        darkTextColor="dark:text-indigo-400"
-        svgComment="SVG8"
-      />
-      <AssetCard
-        name="USD Coin"
-        code="USDC"
-        amount="15,058.42 USDC"
-        value="≈ $15,058.42"
-        bgColor="bg-blue-100"
-        textColor="text-blue-600"
-        darkBgColor="dark:bg-blue-900/30"
-        darkTextColor="dark:text-blue-400"
-        svgComment="SVG9"
-      />
+      {balances.map((token) => (
+        <AssetCard
+          name={token.name}
+          code={token.symbol}
+          amount={token.balance.toFixed(8)}
+          fiatAmount=""
+          bgColor="bg-orange-100"
+          textColor="text-orange-600"
+          darkBgColor="dark:bg-orange-900/30"
+          darkTextColor="dark:text-orange-500"
+          svgComment="SVG4"
+        />
+      ))}
     </div>
   );
 }

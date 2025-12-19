@@ -5,15 +5,15 @@ import MainContent from "@/components/MainContent";
 import {useTurnkey} from "@turnkey/react-wallet-kit";
 
 export default function Index() {
-  const {user} = useTurnkey();
+  const {user, wallets} = useTurnkey();
 
   return (
     <MainLayout>
       <header className="mb-10 items-center justify-between flex">
-        <div>
-          <p className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl dark:text-white">Settings</p>
-          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">Manage your profile, security, and assets.</p>
-        </div>
+        {/*<div>*/}
+        {/*  <p className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl dark:text-white">Settings</p>*/}
+        {/*  <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">Manage your profile, security, and assets.</p>*/}
+        {/*</div>*/}
         <div className="sm:block hidden">
           <span className="h-10 w-10 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 inline-flex">
             <svg className="h-6 w-6 text-neutral-500 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" id="Windframe_EkDUhbk7O">
@@ -23,12 +23,8 @@ export default function Index() {
         </div>
       </header>
       <div className="lg:grid-cols-3 grid gap-8">
-        {user && (
-          <>
-            <Sidebar user={user}/>
-            <MainContent />
-          </>
-        )}
+        {user && <Sidebar user={user}/>}
+        {wallets && <MainContent wallets={wallets}/>}
       </div>
     </MainLayout>
   );

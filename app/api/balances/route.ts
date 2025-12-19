@@ -1,5 +1,5 @@
 import {NextRequest} from "next/server";
-import {Balance} from "@/app/types";
+import {Balance, TokenTypeEip20, Token} from "@/app/types";
 import {Alchemy, Network} from "alchemy-sdk";
 import {getNativeToken, getSupportedTokens} from "@/app/tokens";
 
@@ -38,8 +38,8 @@ export async function GET(request: NextRequest) {
             const balanceWei = await alchemy.core.getBalance(address);
             const balanceEth = Number(balanceWei) / Math.pow(10, Number(nativeToken.decimals));
             balances.push({
-                id: nativeToken.symbol,
-                symbol: nativeToken.symbol,
+                id: nativeToken.id,
+                code: nativeToken.code,
                 name: nativeToken.name,
                 balance: balanceEth,
             })
@@ -47,7 +47,9 @@ export async function GET(request: NextRequest) {
 
         const tokens = getSupportedTokens(addressFormat);
         if (tokens.length > 0) {
-            const contractAddresses = tokens.map((token: any) => token.contractAddress);
+            const contractAddresses = tokens.map((token: Token) => {
+              return (token.tokenType as TokenTypeEip20).contractAddress;
+            });
             // ERC-20 token balances
             const {tokenBalances} = await alchemy.core.getTokenBalances(
                 address,
@@ -55,14 +57,16 @@ export async function GET(request: NextRequest) {
             );
 
             for (const token of tokens) {
-                const tokenBalance = tokenBalances.find(balance => balance.contractAddress === token.contractAddress);
+                const tokenBalance = tokenBalances.find(balance => {
+                  return balance.contractAddress == (token.tokenType as TokenTypeEip20).contractAddress;
+                });
                 const balanceString = tokenBalance?.tokenBalance ?? "0";
 
                 const balance = Number(balanceString) / Math.pow(10, Number(token.decimals));
 
                 balances.push({
-                    id: token.contractAddress,
-                    symbol: token.symbol,
+                    id: token.id,
+                    code: token.code,
                     name: token.name,
                     balance: balance,
                 });

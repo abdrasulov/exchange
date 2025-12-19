@@ -26,7 +26,7 @@ export default function MainContent({wallets}: MainContentProps) {
         <div className="flex-1 p-6">
           {wallets.map(wallet => (
             wallet.accounts.map((account) => (
-              <AssetDetails account={account} />
+              <AssetDetails account={account} key={account.walletAccountId} />
             ))
           ))}
         </div>

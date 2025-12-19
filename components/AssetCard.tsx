@@ -1,4 +1,5 @@
 interface AssetCardProps {
+  id: string;
   name: string;
   code: string;
   amount: string;
@@ -11,6 +12,7 @@ interface AssetCardProps {
 }
 
 const AssetCard = ({
+                     id,
                      name,
                      code,
                      amount,

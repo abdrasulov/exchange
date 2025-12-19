@@ -50,7 +50,7 @@ export function Balances(props: { account: WalletAccount }) {
                             {balances.map((token) => (
                                 <li className="flex justify-between gap-4">
                                     <div>
-                                        {token.symbol || "Unknown"}
+                                        {token.code || "Unknown"}
                                         {token.name && (
                                             <div>
                                                 {token.name}

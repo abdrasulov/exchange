@@ -44,8 +44,10 @@ export default function AssetDetails({account}: AssetDetailsProps) {
     <div className="space-y-4">
       {balances.map((token) => (
         <AssetCard
+          key={token.id}
+          id={token.id}
           name={token.name}
-          code={token.symbol}
+          code={token.code}
           amount={token.balance.toFixed(8)}
           fiatAmount=""
           bgColor="bg-orange-100"

@@ -47,8 +47,6 @@ export default function Sidebar({user}: SidebarProps) {
             className="mb-4 h-20 w-20 rounded-full shadow-lg relative overflow-hidden border-2 border-white dark:border-neutral-700">
             <img alt="Profile" src="https://placehold.co/150x150/262626/FFFFFF/png?text=U"
                  className="object-cover h-full w-full"/>
-            <div
-              className="h-4 w-4 rounded-full bg-green-500 absolute bottom-1 right-1 border-2 border-white dark:border-neutral-800"></div>
           </div>
           <p className="text-xl font-semibold text-neutral-900 dark:text-white">{user.userName}</p>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">{user.userEmail}</p>

@@ -4,6 +4,7 @@ import {useEffect, useState} from "react";
 import {Balance} from "@/app/types";
 import axios from "axios";
 import {WalletAccount} from "@turnkey/core";
+import {ReceiveDialog} from "@/components/ReceiveDialog";
 
 interface AssetDetailsProps {
   account: WalletAccount
@@ -39,24 +40,31 @@ export default function AssetDetails({account}: AssetDetailsProps) {
     fetchBalances();
   }, [address, addressFormat])
 
+  const [open, setOpen] = useState(false);
+  const [receiveToken, setReceiveToken] = useState<Balance | null>(null);
 
   return (
     <div className="space-y-4">
       {balances.map((token) => (
         <AssetCard
           key={token.id}
-          id={token.id}
           name={token.name}
           code={token.code}
           amount={token.balance.toFixed(8)}
           fiatAmount=""
-          bgColor="bg-orange-100"
-          textColor="text-orange-600"
-          darkBgColor="dark:bg-orange-900/30"
-          darkTextColor="dark:text-orange-500"
-          svgComment="SVG4"
+          onReceive={() => {
+            setOpen(true);
+            setReceiveToken(token);
+          }}
         />
       ))}
+
+      <ReceiveDialog
+        open={open}
+        onOpenChange={setOpen}
+        address={address}
+        token={receiveToken}
+      />
     </div>
   );
 }

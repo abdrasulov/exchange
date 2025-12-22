@@ -1,22 +1,17 @@
 interface AssetCardProps {
-  id: string;
-  name: string;
-  code: string;
-  amount: string;
-  fiatAmount: string;
-  bgColor: string;
-  textColor: string;
-  darkBgColor: string;
-  darkTextColor: string;
-  svgComment: string;
+  name: string,
+  code: string,
+  amount: string,
+  fiatAmount: string,
+  onReceive: () => void
 }
 
 const AssetCard = ({
-                     id,
                      name,
                      code,
                      amount,
-                     fiatAmount
+                     fiatAmount,
+                     onReceive
                    }: AssetCardProps) => {
 
   return (
@@ -55,7 +50,7 @@ const AssetCard = ({
             </div>
             Send
           </button>
-          <button type="submit" className="flex flex-col gap-2 border border-neutral-200 hover:bg-neutral-100
+          <button onClick={onReceive} className="flex flex-col gap-2 border border-neutral-200 hover:bg-neutral-100
                         dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-700 items-center justify-center
                         rounded-lg bg-neutral-50 py-3 text-sm font-medium text-neutral-900 dark:bg-neutral-800">
             <div className="h-8 w-8 items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-700

@@ -1,160 +1,30 @@
 import {useTurnkey} from "@turnkey/react-wallet-kit";
-import {CreateWalletButton} from "@/app/createWalletButton";
-import Link from "next/link";
-import axios from "axios";
-import {useState} from "react";
-import {Balances} from "@/app/balances";
-
-function LogoutButton() {
-    const {logout} = useTurnkey();
-
-    const handleLogout = async () => {
-        try {
-            await logout();
-            // Handle successful logout (e.g., redirect to login page)
-            console.log('Logged out successfully');
-        } catch (error) {
-            console.error('Logout failed:', error);
-        }
-    };
-
-    return (
-        <button onClick={handleLogout} className="mt-6 w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-            Logout
-        </button>
-    );
-}
-
-function DeleteAccountButton() {
-    const {logout, deleteSubOrganization} = useTurnkey();
-
-    const handleDeleteAccount = async () => {
-        try {
-            if (window.confirm('Are you sure you want to perform this action?')) {
-                // User confirmed, proceed with the action
-                await deleteSubOrganization({deleteWithoutExport: true});
-                await logout();
-                // Handle successful logout (e.g., redirect to login page)
-                console.log('Action confirmed!');
-            } else {
-                // User canceled
-                console.log('Action canceled.');
-            }
-        } catch (error) {
-            console.error('Logout failed:', error);
-        }
-    };
-
-    return (
-        <button onClick={handleDeleteAccount} className="mt-6 w-full py-2 bg-red-500 text-white rounded-lg hover:bg-red-700 transition">
-            Delete Account
-        </button>
-    );
-}
-
-function VerifyButton({userId}: { userId: string }) {
-    return (
-        <Link
-            target="_blank"
-            href={`/verify?userId=${userId}`}
-            className="w-full py-2 text-center border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition"
-        >
-            Complete KYC
-        </Link>
-    );
-}
+import MainLayout from "@/components/MainLayout";
+import Sidebar from "@/components/Sidebar";
+import MainContent from "@/components/MainContent";
 
 export function UserPage() {
-    const {user, wallets} = useTurnkey();
-    const [verified, setVerified] = useState<boolean | null>(null);
+  const {user, wallets} = useTurnkey();
 
-    if (!user) {
-        return (
-            <div>Loading</div>
-        )
-    }
-
-    axios.get(`/api/verification/?userId=${user.userId}`)
-        .then((response) => {
-            console.log(response.data.verified);
-            setVerified(response.data.verified);
-        })
-        .catch((error) => {
-            console.error(error);
-            setVerified(false)
-        })
-
-    return (
-        <div className="flex justify-center min-h-screen bg-gray-50 p-6 space-x-6">
-            {/* User Profile Card */}
-            <div className="bg-white rounded-2xl shadow-lg p-8 w-80">
-                <h2 className="text-2xl font-bold mb-2 text-gray-800">User Profile</h2>
-                <div className="mt-4 text-left">
-                    <p className="text-gray-600">
-                        <span className="font-semibold text-gray-800">Username:</span> {user.userName}
-                    </p>
-                    <p className="text-gray-600 mt-2">
-                        <span className="font-semibold text-gray-800">Email:</span> {user.userEmail}
-                    </p>
-                </div>
-                <div className="mt-6 flex flex-col space-y-3">
-                    <LogoutButton/>
-                    <DeleteAccountButton/>
-                </div>
-            </div>
-
-            {/* Wallets Card */}
-            <div className="bg-white rounded-2xl shadow-lg p-8 min-w-80">
-                <h2 className="text-2xl font-bold mb-2 text-gray-800">Wallets</h2>
-
-                {wallets && wallets.length > 0 ? (
-                    <div className="space-y-4">
-                        {wallets.map((wallet) => (
-                            <div
-                                key={wallet.walletName}
-                                className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition"
-                            >
-                                <div className="space-y-1">
-                                    {wallet.accounts.map((account) => (
-                                        <div
-                                            key={account.address}
-                                            className="text-sm font-mono text-gray-600 break-all">
-                                            <Balances account={account}/>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-
-
-                        <Link href={"swap"}>
-                            Swap
-                        </Link>
-
-                    </div>
-                ) : (
-                    <div>
-                        <p className="text-gray-500">No wallets found.</p>
-                        <CreateWalletButton/>
-                    </div>
-                )}
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-lg p-8 w-80">
-                <h2 className="text-2xl font-bold mb-2 text-gray-800">Verification</h2>
-                <div className="mt-4 text-left">
-                    <p className="text-gray-600">
-                        <span className="font-semibold text-gray-800">Status: </span>
-                        {verified === true ? <span>Account Verified</span> : null}
-                        {verified === false ? <span>Account Not Verified</span> : null}
-                        {verified === null ? <span>Loading...</span> : null}
-                    </p>
-                </div>
-                <div className="mt-6 flex flex-col space-y-3">
-                    {verified === false ? <VerifyButton userId={user.userId}/> : null}
-                </div>
-            </div>
-
+  return (
+    <MainLayout>
+      <header className="mb-10 items-center justify-between flex">
+        {/*<div>*/}
+        {/*  <p className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl dark:text-white">Settings</p>*/}
+        {/*  <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">Manage your profile, security, and assets.</p>*/}
+        {/*</div>*/}
+        <div className="sm:block hidden">
+          <span className="h-10 w-10 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 inline-flex">
+            <svg className="h-6 w-6 text-neutral-500 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" id="Windframe_EkDUhbk7O">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                    </svg>
+          </span>
         </div>
-    );
+      </header>
+      <div className="lg:grid-cols-3 grid gap-8">
+        {user && <Sidebar user={user}/>}
+        {wallets && <MainContent wallets={wallets}/>}
+      </div>
+    </MainLayout>
+  );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import {Dialog, DialogContent, DialogHeader, DialogTitle,} from '@/components/ui/dialog';
-import {Balance} from "@/app/types";
+import {TokenBalance} from "@/app/types";
 
 export function ReceiveDialog({
                                 open,
@@ -12,7 +12,7 @@ export function ReceiveDialog({
   open: boolean,
   onOpenChange: (open: boolean) => void,
   address: string,
-  token: Balance | null
+  token: TokenBalance | null
 }) {
 
   if (!token) {
@@ -23,19 +23,18 @@ export function ReceiveDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Receive</DialogTitle>
+          <DialogTitle>Receive {token.token.code}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3">
           <div>
-            <p className="text-xs text-muted-foreground">Token</p>
-            <p className="font-medium">{token.name}</p>
-            <p className="font-medium">{token.code}</p>
+            <p className="text-xs text-muted-foreground">Address</p>
+            <p className="font-mono break-all text-sm">{address}</p>
           </div>
 
           <div>
-            <p className="text-xs text-muted-foreground">Address</p>
-            <p className="font-mono break-all text-sm">{address}</p>
+            <p className="text-xs text-muted-foreground">Network</p>
+            <p className="font-medium">{token.token.blockchainType}</p>
           </div>
 
           {/* later: QR code, copy button, network badge */}

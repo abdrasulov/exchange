@@ -1,8 +1,6 @@
-export type Balance = {
-  id: string;
-  code: string;
-  name: string;
+export type TokenBalance = {
   balance: number;
+  token: Token;
 };
 
 export class Token {

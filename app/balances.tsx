@@ -2,14 +2,14 @@
 
 import {useEffect, useState} from "react";
 import {WalletAccount} from "@turnkey/core";
-import {Balance} from "@/app/types";
+import {TokenBalance} from "@/app/types";
 
 import axios from "axios";
 
 export function Balances(props: { account: WalletAccount }) {
     const account = props.account;
 
-    const [balances, setBalances] = useState<Balance[]>([]);
+    const [balances, setBalances] = useState<TokenBalance[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +25,7 @@ export function Balances(props: { account: WalletAccount }) {
             try {
                 const response = await axios.get(`/api/balances/?address=${account.address}&addressFormat=${account.addressFormat}`);
 
-                setBalances(response.data as Balance[]);
+                setBalances(response.data as TokenBalance[]);
             } catch (e) {
                 console.error(e);
                 setError("Failed to load balances.");
@@ -50,12 +50,10 @@ export function Balances(props: { account: WalletAccount }) {
                             {balances.map((token) => (
                                 <li className="flex justify-between gap-4">
                                     <div>
-                                        {token.code || "Unknown"}
-                                        {token.name && (
-                                            <div>
-                                                {token.name}
-                                            </div>
-                                        )}
+                                        {token.token.code}
+                                      <div>
+                                        {token.token.name}
+                                      </div>
                                     </div>
                                     {token.balance}
                                 </li>

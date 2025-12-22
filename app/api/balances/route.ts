@@ -1,5 +1,5 @@
 import {NextRequest} from "next/server";
-import {Balance, TokenTypeEip20, Token} from "@/app/types";
+import {TokenBalance, TokenTypeEip20, Token} from "@/app/types";
 import {Alchemy, Network} from "alchemy-sdk";
 import {getNativeToken, getSupportedTokens} from "@/app/tokens";
 
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         }
     });
 
-    const balances: Balance[] = [];
+    const balances: TokenBalance[] = [];
 
     try {
         const nativeToken = getNativeToken(addressFormat);
@@ -38,10 +38,8 @@ export async function GET(request: NextRequest) {
             const balanceWei = await alchemy.core.getBalance(address);
             const balanceEth = Number(balanceWei) / Math.pow(10, Number(nativeToken.decimals));
             balances.push({
-                id: nativeToken.id,
-                code: nativeToken.code,
-                name: nativeToken.name,
                 balance: balanceEth,
+                token: nativeToken,
             })
         }
 
@@ -65,10 +63,8 @@ export async function GET(request: NextRequest) {
                 const balance = Number(balanceString) / Math.pow(10, Number(token.decimals));
 
                 balances.push({
-                    id: token.id,
-                    code: token.code,
-                    name: token.name,
                     balance: balance,
+                    token: token,
                 });
             }
         }

@@ -1,5 +1,4 @@
 interface AssetCardProps {
-  key: string,
   name: string,
   code: string,
   amount: string,
@@ -8,7 +7,6 @@ interface AssetCardProps {
 }
 
 const AssetCard = ({
-                     key,
                      name,
                      code,
                      amount,
@@ -17,7 +15,7 @@ const AssetCard = ({
                    }: AssetCardProps) => {
 
   return (
-    <div key={key} className="rounded-xl bg-neutral-50 dark:bg-neutral-950/50 group open:ring-1
+    <div className="rounded-xl bg-neutral-50 dark:bg-neutral-950/50 group open:ring-1
                   open:ring-neutral-200 dark:open:ring-neutral-800 border border-neutral-200 dark:border-neutral-800
                   transition-all duration-300">
       <div className="items-center justify-between flex cursor-pointer list-none p-4 focus:outline-none">

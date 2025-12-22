@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 interface AssetCardProps {
   name: string,
   code: string,
@@ -63,7 +65,9 @@ const AssetCard = ({
             </div>
             Receive
           </button>
-          <button type="submit" className="flex flex-col gap-2 border border-neutral-200 hover:bg-neutral-100
+          <Link
+            href={"/swap"}
+            type="submit" className="flex flex-col gap-2 border border-neutral-200 hover:bg-neutral-100
                         dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-700 items-center justify-center
                         rounded-lg bg-neutral-50 py-3 text-sm font-medium text-neutral-900 dark:bg-neutral-800">
             <div className="h-8 w-8 items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-700
@@ -74,7 +78,7 @@ const AssetCard = ({
               </svg>
             </div>
             Swap
-          </button>
+          </Link>
         </div>
       </div>
     </details>

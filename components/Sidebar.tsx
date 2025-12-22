@@ -38,7 +38,7 @@ export default function Sidebar({user}: SidebarProps) {
           </button>
         </div>
       </section>
-      <IdentityStatus/>
+      <IdentityStatus user={user}/>
     </div>
   );
 }

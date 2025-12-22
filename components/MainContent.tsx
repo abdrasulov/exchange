@@ -1,6 +1,7 @@
 'use client';
 import AssetDetails from "@/components/AssetDetails";
 import {Wallet} from "@turnkey/core";
+import {CreateWalletButton} from "@/app/createWalletButton";
 
 interface MainContentProps {
   wallets: Wallet[]
@@ -24,6 +25,7 @@ export default function MainContent({wallets}: MainContentProps) {
         {/*  </div>*/}
         {/*</div>*/}
         <div className="flex-1 p-6">
+          {wallets.length == 0 ? <CreateWalletButton/> : null}
           {wallets.map(wallet => (
             wallet.accounts.map((account) => (
               <AssetDetails account={account} key={account.walletAccountId} />

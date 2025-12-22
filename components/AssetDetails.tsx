@@ -11,10 +11,15 @@ interface AssetDetailsProps {
 }
 
 export default function AssetDetails({account}: AssetDetailsProps) {
+  const [loading, setLoading] = useState<boolean>(false);
   const [balances, setBalances] = useState<TokenBalance[]>([]);
 
   const address = account.address;
   const addressFormat = account.addressFormat;
+
+  if (account.addressFormat != "ADDRESS_FORMAT_ETHEREUM") {
+    return <div/>;
+  }
 
   useEffect(() => {
     const fetchBalances = async () => {
@@ -22,7 +27,7 @@ export default function AssetDetails({account}: AssetDetailsProps) {
       //   return;
       // }
       //
-      // setLoading(true);
+      setLoading(true);
       // setError(null);
       //
       try {
@@ -33,7 +38,7 @@ export default function AssetDetails({account}: AssetDetailsProps) {
         console.error(e);
         // setError("Failed to load balances.");
       } finally {
-        // setLoading(false);
+        setLoading(false);
       }
     };
 
@@ -42,6 +47,34 @@ export default function AssetDetails({account}: AssetDetailsProps) {
 
   const [open, setOpen] = useState(false);
   const [receiveToken, setReceiveToken] = useState<TokenBalance | null>(null);
+
+  if (loading) {
+    return (
+      <div className="mb-4 rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center h-24">
+        <svg
+          className="h-6 w-6 animate-spin text-neutral-400 dark:text-neutral-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          aria-label="Loading"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+          />
+        </svg>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

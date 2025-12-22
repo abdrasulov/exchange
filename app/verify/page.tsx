@@ -13,9 +13,11 @@ function PageError({message}: { message: string }) {
 }
 
 export default async function Verify(
-    {searchParams}: { searchParams: { userId?: string } }
+    {searchParams}: {
+        searchParams: Promise<{ userId?: string }>
+    }
 ) {
-    const userId = searchParams.userId
+    const {userId} = await searchParams
 
     if (!userId) {
         return <PageError message={"No userId set"} />;

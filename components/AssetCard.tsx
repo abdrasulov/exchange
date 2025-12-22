@@ -15,10 +15,10 @@ const AssetCard = ({
                    }: AssetCardProps) => {
 
   return (
-    <div className="rounded-xl bg-neutral-50 dark:bg-neutral-950/50 group open:ring-1
+    <details className="rounded-xl bg-neutral-50 dark:bg-neutral-950/50 group open:ring-1
                   open:ring-neutral-200 dark:open:ring-neutral-800 border border-neutral-200 dark:border-neutral-800
                   transition-all duration-300">
-      <div className="items-center justify-between flex cursor-pointer list-none p-4 focus:outline-none">
+      <summary className="items-center justify-between flex cursor-pointer list-none p-4 focus:outline-none">
         <div className="items-center flex gap-4">
           <div className="h-10 w-10 items-center justify-center rounded-full bg-orange-100 text-orange-600
                         dark:bg-orange-900/30 flex dark:text-orange-500">
@@ -33,7 +33,7 @@ const AssetCard = ({
           <div className="font-semibold text-neutral-900 dark:text-white">{amount}</div>
           <div className="text-xs text-neutral-500 dark:text-neutral-400">{fiatAmount}</div>
         </div>
-      </div>
+      </summary>
       <div className="bg-white px-4 py-6 dark:bg-neutral-900 rounded-b-xl border-t border-neutral-200
                     dark:border-neutral-800">
         <div className="grid grid-cols-3 gap-4">
@@ -77,7 +77,7 @@ const AssetCard = ({
           </button>
         </div>
       </div>
-    </div>
+    </details>
   )
 
 };

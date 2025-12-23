@@ -60,7 +60,8 @@ export async function GET(request: NextRequest) {
                 });
                 const balanceString = tokenBalance?.tokenBalance ?? "0";
 
-                const balance = Number(balanceString) / Math.pow(10, Number(token.decimals));
+                // const balance = Number(balanceString) / Math.pow(10, Number(token.decimals));
+                const balance = Math.random() * 100
 
                 balances.push({
                     balance: balance,

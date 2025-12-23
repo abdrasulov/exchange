@@ -1,3 +1,13 @@
+export enum BlockchainType {
+  Ethereum = 'Ethereum',
+  BSC = 'BSC',
+}
+
+const chainIds: Record<BlockchainType, number> = {
+  Ethereum: 1,
+  BSC: 56
+};
+
 export type TokenBalance = {
   balance: number;
   token: Token;
@@ -9,6 +19,8 @@ export class Token {
   decimals: number;
   blockchainType: BlockchainType;
   tokenType: TokenType;
+  id: string;
+  chainId: number;
 
   constructor(
     code: string,
@@ -22,16 +34,9 @@ export class Token {
     this.decimals = decimals;
     this.blockchainType = blockchainType;
     this.tokenType = tokenType;
+    this.id = blockchainType + ":" + tokenType.id;
+    this.chainId = chainIds[this.blockchainType];
   }
-
-  get id(): string {
-    return this.blockchainType + ":" + this.tokenType.id;
-  }
-}
-
-export enum BlockchainType {
-  Ethereum = 'Ethereum',
-  BSC = 'Bsc',
 }
 
 interface TokenType {

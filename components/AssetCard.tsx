@@ -6,6 +6,7 @@ interface AssetCardProps {
   amount: string,
   fiatAmount: string,
   onReceive: () => void
+  onSend: () => void
 }
 
 const AssetCard = ({
@@ -13,7 +14,8 @@ const AssetCard = ({
                      code,
                      amount,
                      fiatAmount,
-                     onReceive
+                     onReceive,
+                     onSend
                    }: AssetCardProps) => {
 
   return (
@@ -39,7 +41,7 @@ const AssetCard = ({
       <div className="bg-white px-4 py-6 dark:bg-neutral-900 rounded-b-xl border-t border-neutral-200
                     dark:border-neutral-800">
         <div className="grid grid-cols-3 gap-4">
-          <button type="submit" className="flex flex-col gap-2 border border-neutral-200 hover:bg-neutral-100
+          <button onClick={onSend} type="submit" className="flex flex-col gap-2 border border-neutral-200 hover:bg-neutral-100
                         dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-700 items-center justify-center
                         rounded-lg bg-neutral-50 py-3 text-sm font-medium text-neutral-900 dark:bg-neutral-800">
             <div className="h-8 w-8 items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-700

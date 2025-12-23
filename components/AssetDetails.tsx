@@ -5,6 +5,7 @@ import {TokenBalance} from "@/app/types";
 import axios from "axios";
 import {WalletAccount} from "@turnkey/core";
 import {ReceiveDialog} from "@/components/ReceiveDialog";
+import {SendDialog} from "@/components/SendDialog";
 
 interface AssetDetailsProps {
   account: WalletAccount
@@ -45,7 +46,9 @@ export default function AssetDetails({account}: AssetDetailsProps) {
     fetchBalances();
   }, [address, addressFormat])
 
-  const [open, setOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [sendToken, setSendToken] = useState<TokenBalance | null>(null);
+  const [receiveOpen, setReceiveOpen] = useState(false);
   const [receiveToken, setReceiveToken] = useState<TokenBalance | null>(null);
 
   if (loading) {
@@ -86,15 +89,27 @@ export default function AssetDetails({account}: AssetDetailsProps) {
           amount={token.balance.toFixed(token.token.decimals).replace(/\.?0+$/, '')}
           fiatAmount=""
           onReceive={() => {
-            setOpen(true);
+            setReceiveOpen(true);
             setReceiveToken(token);
+          }}
+          onSend={() => {
+            setSendOpen(true);
+            setSendToken(token);
           }}
         />
       ))}
 
+      <SendDialog
+        open={sendOpen}
+        onOpenChange={setSendOpen}
+        address={address}
+        tokenBalance={sendToken}
+        walletAccount={account}
+      />
+
       <ReceiveDialog
-        open={open}
-        onOpenChange={setOpen}
+        open={receiveOpen}
+        onOpenChange={setReceiveOpen}
         address={address}
         token={receiveToken}
       />

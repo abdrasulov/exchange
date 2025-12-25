@@ -40,23 +40,23 @@ export class Token {
 }
 
 interface TokenType {
-  get id(): string
+  id: string;
 }
 
 export class TokenTypeNative implements TokenType {
-  get id(): string {
-    return "Native";
+  id: string;
+
+  constructor() {
+    this.id = "Native"
   }
 }
 
 export class TokenTypeEip20 implements TokenType {
+  id: string;
   contractAddress: string;
 
   constructor(contractAddress: string) {
-    this.contractAddress = contractAddress
-  }
-
-  get id(): string {
-    return "Eip20-" + this.contractAddress;
+    this.id = "Eip20-" + contractAddress;
+    this.contractAddress = contractAddress;
   }
 }

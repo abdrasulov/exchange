@@ -5,11 +5,12 @@ import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {TokenBalance} from "@/app/types";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {useTurnkey} from "@turnkey/react-wallet-kit";
 import {ethers} from "ethers";
 import {WalletAccount} from "@turnkey/core";
 import {Loader2} from "lucide-react";
+import {sleep} from "@walletconnect/utils";
 
 export function SendDialog({
                              open,
@@ -26,12 +27,37 @@ export function SendDialog({
 }) {
   if (!tokenBalance) return null;
 
+  type Step = "form" | "confirm";
+
+  const [step, setStep] = useState<Step>("form");
+
   const [loading, setLoading] = useState(false);
   const [recipient, setRecipient] = useState("");
   const [recipientError, setRecipientError] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [amountError, setAmountError] = useState<string | null>(null);
   const { signAndSendTransaction, signTransaction } = useTurnkey();
+
+  useEffect(() => {
+    if (!open) {
+      setStep("form");
+      setRecipient("");
+      setAmount("");
+      setRecipientError(null);
+      setAmountError(null);
+    }
+  }, [open]);
+
+  const isFormValid =
+    !recipientError &&
+    !amountError &&
+    recipient.length > 0 &&
+    amount.length > 0;
+
+  const handleReview = () => {
+    if (!isFormValid) return;
+    setStep("confirm");
+  };
 
   const token = tokenBalance.token;
 
@@ -93,113 +119,153 @@ export function SendDialog({
     setAmountError(validateAmount(value));
   };
 
-  const handleSend = () => {
-    setLoading(true);
-    const tx = {
-      to: recipient,
-      value: ethers.parseEther(amount),
-      chainId: token.chainId,
-      // type: 2, // EIP-1559
-    };
+  const handleConfirmSend = async () => {
+    try {
+      setLoading(true);
 
-    const unsignedTransaction =
-      ethers.Transaction.from(tx).unsignedSerialized;
+      const tx = {
+        to: recipient,
+        value: ethers.parseEther(amount),
+        chainId: token.chainId,
+      };
 
-    // signAndSendTransaction({
-    //         unsignedTransaction: unsignedTransaction,
-    //         transactionType: "TRANSACTION_TYPE_ETHEREUM",
-    //         walletAccount: walletAccount,
-    //         rpcUrl: "https://ethereum-rpc.publicnode.com",
-    //         // stampWith?: StamperType | undefined,
-    //         // organizationId?: string,
-    //       }
-    //     )
+      const unsignedTransaction =
+        ethers.Transaction.from(tx).unsignedSerialized;
 
-    signTransaction({
-      unsignedTransaction: unsignedTransaction,
-      transactionType: "TRANSACTION_TYPE_ETHEREUM",
-      walletAccount: walletAccount,
-    }).then((result) => {
-      console.log("Success");
-      console.log(result);
-    }).catch((err) => {
+      // await signAndSendTransaction({
+      //         unsignedTransaction: unsignedTransaction,
+      //         transactionType: "TRANSACTION_TYPE_ETHEREUM",
+      //         walletAccount: walletAccount,
+      //         rpcUrl: "https://ethereum-rpc.publicnode.com",
+      //         // stampWith?: StamperType | undefined,
+      //         // organizationId?: string,
+      //       }
+      //     )
+
+      // await signTransaction({
+      //   unsignedTransaction,
+      //   transactionType: "TRANSACTION_TYPE_ETHEREUM",
+      //   walletAccount,
+      // });
+
+      await sleep(1000);
+
+      onOpenChange(false);
+    } catch (err) {
       console.error(err);
-    }).finally(() => {
+    } finally {
       setLoading(false);
-    })
+    }
   };
 
-  const isFormValid =
-    !recipientError &&
-    !amountError &&
-    recipient.length > 0 &&
-    amount.length > 0;
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={loading ? () => {} : onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Send {tokenBalance.token.code}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5">
-          {/* Network */}
-          <div>
-            <p className="text-xs text-muted-foreground">Network</p>
-            <p className="font-medium">{tokenBalance.token.blockchainType}</p>
-          </div>
-
-          {/* Recipient */}
-          <div className="space-y-2">
-            <Label htmlFor="recipient">Recipient</Label>
-            <Input
-              id="recipient"
-              placeholder="Wallet address"
-              value={recipient}
-              onChange={(e) => onEnterRecipient(e.target.value)}
-              className={recipientError ? "border-red-500 focus-visible:ring-red-500" : ""}
-            />
-
-            {recipientError && (
-              <p className="text-sm text-red-500">{recipientError}</p>
-            )}
-          </div>
-          {/* Amount */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="amount">Amount</Label>
-              <span className="text-xs text-muted-foreground">
-                Balance: {tokenBalance.balance} {tokenBalance.token.code}
-              </span>
+        {step === "form" && (
+          <div className="space-y-5">
+            {/* Network */}
+            <div>
+              <p className="text-xs text-muted-foreground">Network</p>
+              <p className="font-medium">{tokenBalance.token.blockchainType}</p>
             </div>
 
-            <Input
-              id="amount"
-              type="number"
-              inputMode="decimal"
-              placeholder="0.0"
-              value={amount}
-              onChange={(e) => onEnterAmount(e.target.value)}
-              className={amountError ? "border-red-500 focus-visible:ring-red-500" : ""}
-            />
+            {/* Recipient */}
+            <div className="space-y-2">
+              <Label htmlFor="recipient">Recipient</Label>
+              <Input
+                id="recipient"
+                placeholder="Wallet address"
+                value={recipient}
+                onChange={(e) => onEnterRecipient(e.target.value)}
+                className={recipientError ? "border-red-500 focus-visible:ring-red-500" : ""}
+              />
 
-            {amountError && (
-              <p className="text-sm text-red-500">{amountError}</p>
-            )}
+              {recipientError && (
+                <p className="text-sm text-red-500">{recipientError}</p>
+              )}
+            </div>
+            {/* Amount */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="amount">Amount</Label>
+                <span className="text-xs text-muted-foreground">
+                Balance: {tokenBalance.balance} {tokenBalance.token.code}
+              </span>
+              </div>
+
+              <Input
+                id="amount"
+                type="number"
+                inputMode="decimal"
+                placeholder="0.0"
+                value={amount}
+                onChange={(e) => onEnterAmount(e.target.value)}
+                className={amountError ? "border-red-500 focus-visible:ring-red-500" : ""}
+              />
+
+              {amountError && (
+                <p className="text-sm text-red-500">{amountError}</p>
+              )}
+            </div>
+
+            {/* Action */}
+            <Button
+              className="w-full"
+              onClick={handleReview}
+              disabled={!isFormValid}
+            >
+              Review
+            </Button>
           </div>
+        )}
 
-          {/* Action */}
-          <Button
-            className="w-full"
-            onClick={handleSend}
-            disabled={!isFormValid || loading}
-          >
-            {loading && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            )}
-            {loading ? "Sending…" : "Send"}
-          </Button>
-        </div>
+        {step === "confirm" && (
+          <div className="space-y-5">
+            <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Asset</p>
+                <p className="font-medium">
+                  {amount} {token.code}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs text-muted-foreground">To</p>
+                <p className="font-mono text-sm break-all">{recipient}</p>
+              </div>
+
+              <div>
+                <p className="text-xs text-muted-foreground">Network</p>
+                <p className="font-medium">{token.blockchainType}</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="basis-1/3"
+                onClick={() => setStep("form")}
+                disabled={loading}
+              >
+                Back
+              </Button>
+
+              <Button
+                className="basis-2/3"
+                onClick={handleConfirmSend}
+                disabled={loading}
+              >
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {loading ? "Sending…" : "Confirm & Send"}
+              </Button>
+            </div>
+          </div>
+        )}
+
       </DialogContent>
     </Dialog>
   );

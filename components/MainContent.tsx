@@ -1,17 +1,16 @@
-'use client';
-import AssetDetails from "@/components/AssetDetails";
-import {Wallet} from "@turnkey/core";
-import {CreateWalletButton} from "@/app/createWalletButton";
+'use client'
+import AssetDetails from '@/components/AssetDetails'
+import { Wallet } from '@turnkey/core'
+import { CreateWalletButton } from '@/components/CreateWalletButton'
 
 interface MainContentProps {
   wallets: Wallet[]
 }
 
-export default function MainContent({wallets}: MainContentProps) {
+export default function MainContent({ wallets }: MainContentProps) {
   return (
     <div className="lg:col-span-2">
-      <section
-        className="h-full rounded-2xl bg-white shadow-sm dark:bg-neutral-900 flex flex-col border border-neutral-200 dark:border-neutral-800">
+      <section className="flex h-full flex-col rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
         {/*<div className="border-b border-neutral-200 p-6 dark:border-neutral-800">*/}
         {/*  <div className="items-end justify-between flex">*/}
         {/*    <div>*/}
@@ -25,14 +24,12 @@ export default function MainContent({wallets}: MainContentProps) {
         {/*  </div>*/}
         {/*</div>*/}
         <div className="flex-1 p-6">
-          {wallets.length == 0 ? <CreateWalletButton/> : null}
-          {wallets.map(wallet => (
-            wallet.accounts.map((account) => (
-              <AssetDetails account={account} key={account.walletAccountId} />
-            ))
-          ))}
+          {wallets.length == 0 ? <CreateWalletButton /> : null}
+          {wallets.map(wallet =>
+            wallet.accounts.map(account => <AssetDetails account={account} key={account.walletAccountId} />)
+          )}
         </div>
       </section>
     </div>
-  );
+  )
 }

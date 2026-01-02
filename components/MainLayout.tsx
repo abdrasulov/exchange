@@ -1,15 +1,13 @@
-'use client';
+'use client'
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="w-full bg-white text-neutral-900 dark:bg-neutral-950 relative min-h-screen isolate antialiased dark:text-neutral-100 transition-colors duration-300">
+    <div className="relative isolate min-h-screen w-full bg-white text-neutral-900 antialiased transition-colors duration-300 dark:bg-neutral-950 dark:text-neutral-100">
       {/*<div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">*/}
       {/*  <div className="h-[60vh] w-[60vh] rounded-full bg-gradient-to-br absolute -top-32 -left-32 from-indigo-200 via-lime-200 to-purple-300 opacity-20 blur-2xl dark:opacity-0"></div>*/}
       {/*  <div className="h-[40vh] w-[50vh] rounded-full bg-gradient-to-tr absolute -bottom-20 right-10 from-fuchsia-300 via-orange-300 to-rose-200 opacity-40 blur-3xl dark:opacity-0"></div>*/}
       {/*  <div className="h-[35vh] w-[45vh] rounded-full bg-gradient-to-b dark:h-[28vh] absolute top-28 left-1/4 from-orange-300 via-amber-200 to-rose-100 opacity-60 blur-3xl dark:from-orange-600 dark:via-amber-500 dark:to-rose-400 dark:opacity-64"></div>*/}
       {/*</div>*/}
-      <main className="mx-auto px-4 py-12 sm:px-6 lg:px-8 max-w-5xl">
-        {children}
-      </main>
+      <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">{children}</main>
     </div>
-  );
+  )
 }

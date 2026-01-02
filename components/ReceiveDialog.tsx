@@ -1,22 +1,21 @@
-'use client';
+'use client'
 
-import {Dialog, DialogContent, DialogHeader, DialogTitle,} from '@/components/ui/dialog';
-import {TokenBalance} from "@/app/types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { TokenBalance } from '@/app/api/types'
 
 export function ReceiveDialog({
-                                open,
-                                onOpenChange,
-                                address,
-                                token
-                              }: {
-  open: boolean,
-  onOpenChange: (open: boolean) => void,
-  address: string,
+  open,
+  onOpenChange,
+  address,
+  token
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  address: string
   token: TokenBalance | null
 }) {
-
   if (!token) {
-    return;
+    return
   }
 
   return (
@@ -28,12 +27,12 @@ export function ReceiveDialog({
 
         <div className="space-y-3">
           <div>
-            <p className="text-xs text-muted-foreground">Address</p>
-            <p className="font-mono break-all text-sm">{address}</p>
+            <p className="text-muted-foreground text-xs">Address</p>
+            <p className="font-mono text-sm break-all">{address}</p>
           </div>
 
           <div>
-            <p className="text-xs text-muted-foreground">Network</p>
+            <p className="text-muted-foreground text-xs">Network</p>
             <p className="font-medium">{token.token.blockchainType}</p>
           </div>
 
@@ -41,5 +40,5 @@ export function ReceiveDialog({
         </div>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

@@ -4,13 +4,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { TokenBalance } from '@/app/api/types'
+import { TokenBalance, TokenTypeEip20, TokenTypeNative } from '@/app/api/types'
 import { useEffect, useState } from 'react'
 import { useTurnkey } from '@turnkey/react-wallet-kit'
 import { ethers } from 'ethers'
 import { WalletAccount } from '@turnkey/core'
 import { Loader2 } from 'lucide-react'
-import { sleep } from '@walletconnect/utils'
 
 export function SendDialog({
   open,
@@ -36,7 +35,8 @@ export function SendDialog({
   const [recipientError, setRecipientError] = useState<string | null>(null)
   const [amount, setAmount] = useState('')
   const [amountError, setAmountError] = useState<string | null>(null)
-  const { signAndSendTransaction, signTransaction } = useTurnkey()
+  const [error, setError] = useState<string | null>(null)
+  const { signAndSendTransaction } = useTurnkey()
 
   useEffect(() => {
     if (!open) {
@@ -45,8 +45,20 @@ export function SendDialog({
       setAmount('')
       setRecipientError(null)
       setAmountError(null)
+      setError(null)
     }
   }, [open])
+
+  const getRpcUrl = (chainId: number): string => {
+    switch (chainId) {
+      case 1: // Ethereum Mainnet
+        return 'https://ethereum-rpc.publicnode.com'
+      case 56: // BSC Mainnet
+        return 'https://bsc-rpc.publicnode.com'
+      default:
+        throw new Error(`Unsupported chain ID: ${chainId}`)
+    }
+  }
 
   const isFormValid = !recipientError && !amountError && recipient.length > 0 && amount.length > 0
 
@@ -115,36 +127,57 @@ export function SendDialog({
   const handleConfirmSend = async () => {
     try {
       setLoading(true)
+      setError(null)
 
-      const tx = {
-        to: recipient,
-        value: ethers.parseEther(amount),
-        chainId: token.chainId
+      const isNativeToken = token.tokenType instanceof TokenTypeNative
+      const rpcUrl = getRpcUrl(token.chainId)
+
+      // Fetch the current nonce for the address
+      const provider = new ethers.JsonRpcProvider(rpcUrl)
+      const nonce = await provider.getTransactionCount(address, 'latest')
+
+      let unsignedTransaction: string
+
+      if (isNativeToken) {
+        const amountWei = ethers.parseUnits(amount, token.decimals)
+        const tx = {
+          to: recipient,
+          value: amountWei,
+          chainId: token.chainId,
+          gasLimit: 21000,
+          nonce: nonce
+        }
+        unsignedTransaction = ethers.Transaction.from(tx).unsignedSerialized
+      } else {
+        const tokenTypeEip20 = token.tokenType as TokenTypeEip20
+        const contractAddress = tokenTypeEip20.contractAddress
+        const erc20Interface = new ethers.Interface(['function transfer(address to, uint256 amount) returns (bool)'])
+
+        const amountWei = ethers.parseUnits(amount, token.decimals)
+        const data = erc20Interface.encodeFunctionData('transfer', [recipient, amountWei])
+
+        const tx = {
+          to: contractAddress,
+          data: data,
+          value: 0,
+          chainId: token.chainId,
+          gasLimit: 100000,
+          nonce: nonce
+        }
+        unsignedTransaction = ethers.Transaction.from(tx).unsignedSerialized
       }
 
-      const unsignedTransaction = ethers.Transaction.from(tx).unsignedSerialized
-
-      // await signAndSendTransaction({
-      //         unsignedTransaction: unsignedTransaction,
-      //         transactionType: "TRANSACTION_TYPE_ETHEREUM",
-      //         walletAccount: walletAccount,
-      //         rpcUrl: "https://ethereum-rpc.publicnode.com",
-      //         // stampWith?: StamperType | undefined,
-      //         // organizationId?: string,
-      //       }
-      //     )
-
-      // await signTransaction({
-      //   unsignedTransaction,
-      //   transactionType: "TRANSACTION_TYPE_ETHEREUM",
-      //   walletAccount,
-      // });
-
-      await sleep(1000)
+      await signAndSendTransaction({
+        unsignedTransaction,
+        transactionType: 'TRANSACTION_TYPE_ETHEREUM',
+        walletAccount: walletAccount,
+        rpcUrl
+      })
 
       onOpenChange(false)
     } catch (err) {
-      console.error(err)
+      console.error('Send transaction error:', err)
+      setError(err instanceof Error ? err.message : 'Failed to send transaction')
     } finally {
       setLoading(false)
     }
@@ -227,6 +260,12 @@ export function SendDialog({
                 <p className="font-medium">{token.blockchainType}</p>
               </div>
             </div>
+
+            {error && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
 
             <div className="flex gap-3">
               <Button variant="outline" className="basis-1/3" onClick={() => setStep('form')} disabled={loading}>

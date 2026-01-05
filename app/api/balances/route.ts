@@ -55,10 +55,9 @@ export async function GET(request: NextRequest) {
         const tokenBalance = tokenBalances.find(balance => {
           return balance.contractAddress == (token.tokenType as TokenTypeEip20).contractAddress
         })
-        const balanceString = tokenBalance?.tokenBalance ?? '0'
 
-        // const balance = Number(balanceString) / Math.pow(10, Number(token.decimals));
-        const balance = Math.random() * 100
+        const balanceString = tokenBalance?.tokenBalance ?? '0'
+        const balance = Number(balanceString) / Math.pow(10, Number(token.decimals));
 
         balances.push({
           balance: balance,

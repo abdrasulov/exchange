@@ -54,3 +54,24 @@ export class TokenTypeEip20 implements TokenType {
     this.contractAddress = contractAddress
   }
 }
+
+export interface TransactionHistoryItem {
+  uniqueId: string
+  category: 'external' | 'internal' | 'erc20'
+  blockNum: string
+  timestamp: string
+  from: string
+  to: string | null
+  value: number | null
+  asset: string | null
+  hash: string
+  rawContract: {
+    address: string | null
+    decimal: string | null
+  }
+}
+
+export interface TransactionHistoryResponse {
+  transfers: TransactionHistoryItem[]
+  pageKey?: string
+}

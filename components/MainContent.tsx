@@ -1,7 +1,9 @@
 'use client'
 import AssetDetails from '@/components/AssetDetails'
+import TransactionHistory from '@/components/TransactionHistory'
 import { Wallet } from '@turnkey/core'
 import { CreateWalletButton } from '@/components/CreateWalletButton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface MainContentProps {
   wallets: Wallet[]
@@ -24,9 +26,37 @@ export default function MainContent({ wallets }: MainContentProps) {
         {/*  </div>*/}
         {/*</div>*/}
         <div className="flex-1 p-6">
-          {wallets.length == 0 ? <CreateWalletButton /> : null}
-          {wallets.map(wallet =>
-            wallet.accounts.map(account => <AssetDetails account={account} key={account.walletAccountId} />)
+          {wallets.length == 0 ? (
+            <CreateWalletButton />
+          ) : (
+            <Tabs defaultValue="assets" className="w-full">
+              <TabsList className="mb-4 bg-neutral-100 dark:bg-neutral-800">
+                <TabsTrigger value="assets">Assets</TabsTrigger>
+                <TabsTrigger value="history">History</TabsTrigger>
+              </TabsList>
+              <TabsContent value="assets">
+                <div className="space-y-4">
+                  {wallets.map(wallet =>
+                    wallet.accounts.map(account => <AssetDetails account={account} key={account.walletAccountId} />)
+                  )}
+                </div>
+              </TabsContent>
+              <TabsContent value="history">
+                <div className="space-y-6">
+                  {wallets.map(wallet =>
+                    wallet.accounts.map(account => (
+                      <div key={account.walletAccountId}>
+                        <h3 className="mb-3 text-sm font-medium text-neutral-500 dark:text-neutral-400">
+                          {account.addressFormat.replace('ADDRESS_FORMAT_', '')} - {account.address.slice(0, 6)}...
+                          {account.address.slice(-4)}
+                        </h3>
+                        <TransactionHistory account={account} />
+                      </div>
+                    ))
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           )}
         </div>
       </section>

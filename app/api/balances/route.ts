@@ -3,6 +3,44 @@ import { Token, TokenBalance, TokenTypeEip20 } from '@/app/api/types'
 import { Alchemy, Network } from 'alchemy-sdk'
 import { getNativeToken, getSupportedTokens } from '@/app/api/tokens'
 
+const coinGeckoIds: Record<string, string> = {
+  ETH: 'ethereum',
+  USDT: 'tether',
+  USDC: 'usd-coin'
+}
+
+async function fetchTokenPrices(tokenCodes: string[]): Promise<Record<string, number>> {
+  try {
+    const geckoIds = tokenCodes.map(code => coinGeckoIds[code]).filter(Boolean)
+    if (geckoIds.length === 0) return {}
+
+    const response = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${geckoIds.join(',')}&vs_currencies=usd`,
+      { next: { revalidate: 60 } } // Cache for 60 seconds
+    )
+
+    if (!response.ok) {
+      console.error('Failed to fetch prices from CoinGecko')
+      return {}
+    }
+
+    const data = await response.json()
+    const prices: Record<string, number> = {}
+
+    for (const code in coinGeckoIds) {
+      const geckoId = coinGeckoIds[code]
+      if (data[geckoId]?.usd) {
+        prices[code] = data[geckoId].usd
+      }
+    }
+
+    return prices
+  } catch (error) {
+    console.error('Error fetching token prices:', error)
+    return {}
+  }
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const address = searchParams.get('address')
@@ -57,7 +95,7 @@ export async function GET(request: NextRequest) {
         })
 
         const balanceString = tokenBalance?.tokenBalance ?? '0'
-        const balance = Number(balanceString) / Math.pow(10, Number(token.decimals));
+        const balance = Number(balanceString) / Math.pow(10, Number(token.decimals))
 
         balances.push({
           balance: balance,
@@ -69,5 +107,16 @@ export async function GET(request: NextRequest) {
     console.error(e)
   }
 
-  return Response.json(balances)
+  // Fetch prices for all tokens
+  const tokenCodes = balances.map(b => b.token.code)
+  const prices = await fetchTokenPrices(tokenCodes)
+
+  // Add USD price and value to each balance
+  const balancesWithPrices = balances.map(balance => ({
+    ...balance,
+    usdPrice: prices[balance.token.code],
+    usdValue: prices[balance.token.code] ? balance.balance * prices[balance.token.code] : undefined
+  }))
+
+  return Response.json(balancesWithPrices)
 }

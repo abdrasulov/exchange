@@ -11,6 +11,8 @@ const chainIds: Record<BlockchainType, number> = {
 export type TokenBalance = {
   balance: number
   token: Token
+  usdPrice?: number
+  usdValue?: number
 }
 
 export class Token {

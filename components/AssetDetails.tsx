@@ -1,8 +1,7 @@
 'use client'
 
-import axios from 'axios'
 import AssetCard from '@/components/AssetCard'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { TokenBalance } from '@/app/api/types'
 import { WalletAccount } from '@turnkey/core'
 import { ReceiveDialog } from '@/components/ReceiveDialog'
@@ -10,42 +9,16 @@ import { SendDialog } from '@/components/SendDialog'
 
 interface AssetDetailsProps {
   account: WalletAccount
+  balances: TokenBalance[]
+  loading: boolean
 }
 
-export default function AssetDetails({ account }: AssetDetailsProps) {
-  const [loading, setLoading] = useState<boolean>(false)
-  const [balances, setBalances] = useState<TokenBalance[]>([])
-
+export default function AssetDetails({ account, balances, loading }: AssetDetailsProps) {
   const address = account.address
-  const addressFormat = account.addressFormat
 
   if (account.addressFormat != 'ADDRESS_FORMAT_ETHEREUM') {
     return <div />
   }
-
-  useEffect(() => {
-    const fetchBalances = async () => {
-      // if (!account.address) {
-      //   return;
-      // }
-      //
-      setLoading(true)
-      // setError(null);
-      //
-      try {
-        const response = await axios.get(`/api/balances/?address=${address}&addressFormat=${addressFormat}`)
-
-        setBalances(response.data as TokenBalance[])
-      } catch (e) {
-        console.error(e)
-        // setError("Failed to load balances.");
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchBalances()
-  }, [address, addressFormat])
 
   const [sendOpen, setSendOpen] = useState(false)
   const [sendToken, setSendToken] = useState<TokenBalance | null>(null)
@@ -77,7 +50,11 @@ export default function AssetDetails({ account }: AssetDetailsProps) {
           name={token.token.name}
           code={token.token.code}
           amount={token.balance.toFixed(token.token.decimals).replace(/\.?0+$/, '')}
-          fiatAmount=""
+          fiatAmount={
+            token.usdValue
+              ? `$${token.usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : ''
+          }
           onReceive={() => {
             setReceiveOpen(true)
             setReceiveToken(token)

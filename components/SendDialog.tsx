@@ -1,15 +1,15 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { ethers } from 'ethers'
+import { WalletAccount } from '@turnkey/core'
+import { useTurnkey } from '@turnkey/react-wallet-kit'
+import { CheckCircle2, ExternalLink, Loader2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { TokenBalance, TokenTypeEip20, TokenTypeNative } from '@/app/api/types'
-import { useEffect, useState } from 'react'
-import { useTurnkey } from '@turnkey/react-wallet-kit'
-import { ethers } from 'ethers'
-import { WalletAccount } from '@turnkey/core'
-import { Loader2 } from 'lucide-react'
 
 export function SendDialog({
   open,
@@ -26,9 +26,10 @@ export function SendDialog({
 }) {
   if (!tokenBalance) return null
 
-  type Step = 'form' | 'confirm'
+  type Step = 'form' | 'confirm' | 'success'
 
   const [step, setStep] = useState<Step>('form')
+  const [txHash, setTxHash] = useState<string>('')
 
   const [loading, setLoading] = useState(false)
   const [recipient, setRecipient] = useState('')
@@ -46,6 +47,7 @@ export function SendDialog({
       setRecipientError(null)
       setAmountError(null)
       setError(null)
+      setTxHash('')
     }
   }, [open])
 
@@ -136,6 +138,9 @@ export function SendDialog({
       const provider = new ethers.JsonRpcProvider(rpcUrl)
       const nonce = await provider.getTransactionCount(address, 'latest')
 
+      // Get current fee data
+      const feeData = await provider.getFeeData()
+
       let unsignedTransaction: string
 
       if (isNativeToken) {
@@ -145,7 +150,10 @@ export function SendDialog({
           value: amountWei,
           chainId: token.chainId,
           gasLimit: 21000,
-          nonce: nonce
+          nonce: nonce,
+          maxFeePerGas: feeData.maxFeePerGas,
+          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+          type: 2 // EIP-1559 transaction
         }
         unsignedTransaction = ethers.Transaction.from(tx).unsignedSerialized
       } else {
@@ -162,19 +170,29 @@ export function SendDialog({
           value: 0,
           chainId: token.chainId,
           gasLimit: 100000,
-          nonce: nonce
+          nonce: nonce,
+          maxFeePerGas: feeData.maxFeePerGas,
+          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+          type: 2 // EIP-1559 transaction
         }
         unsignedTransaction = ethers.Transaction.from(tx).unsignedSerialized
       }
 
-      await signAndSendTransaction({
+      // Sign and send transaction, get the transaction hash
+      const hash = await signAndSendTransaction({
         unsignedTransaction,
         transactionType: 'TRANSACTION_TYPE_ETHEREUM',
         walletAccount: walletAccount,
         rpcUrl
       })
 
-      onOpenChange(false)
+      setTxHash(hash)
+
+      // Wait for transaction to be mined
+      await provider.waitForTransaction(hash)
+
+      // Show success screen
+      setStep('success')
     } catch (err) {
       console.error('Send transaction error:', err)
       setError(err instanceof Error ? err.message : 'Failed to send transaction')
@@ -235,7 +253,7 @@ export function SendDialog({
 
             {/* Action */}
             <Button className="w-full" onClick={handleReview} disabled={!isFormValid}>
-              Review
+              Next
             </Button>
           </div>
         )}
@@ -277,6 +295,39 @@ export function SendDialog({
                 {loading ? 'Sending…' : 'Confirm & Send'}
               </Button>
             </div>
+          </div>
+        )}
+
+        {step === 'success' && (
+          <div className="space-y-5">
+            <div className="flex flex-col items-center justify-center space-y-3 py-4">
+              <CheckCircle2 className="h-16 w-16 text-green-500" />
+              <div className="text-center">
+                <h3 className="text-lg font-semibold">Transaction Confirmed</h3>
+                <p className="text-muted-foreground text-sm">
+                  {amount} {token.code} sent successfully
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs">Transaction Hash</p>
+              <div className="flex items-center gap-2 rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+                <p className="flex-1 font-mono text-xs break-all">{txHash}</p>
+                <a
+                  href={`https://etherscan.io/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0 text-blue-500 hover:text-blue-600"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </div>
+            </div>
+
+            <Button className="w-full" onClick={() => onOpenChange(false)}>
+              Done
+            </Button>
           </div>
         )}
       </DialogContent>

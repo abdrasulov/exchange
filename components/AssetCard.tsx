@@ -7,9 +7,10 @@ interface AssetCardProps {
   fiatAmount: string
   onReceive: () => void
   onSend: () => void
+  tokenIdentifier?: string
 }
 
-const AssetCard = ({ name, code, amount, fiatAmount, onReceive, onSend }: AssetCardProps) => {
+const AssetCard = ({ name, code, amount, fiatAmount, onReceive, onSend, tokenIdentifier }: AssetCardProps) => {
   return (
     <details className="group rounded-xl border border-neutral-200 bg-neutral-50 transition-all duration-300 open:ring-1 open:ring-neutral-200 dark:border-neutral-800 dark:bg-neutral-950/50 dark:open:ring-neutral-800">
       <summary className="flex cursor-pointer list-none items-center justify-between p-4 focus:outline-none">
@@ -68,8 +69,7 @@ const AssetCard = ({ name, code, amount, fiatAmount, onReceive, onSend }: AssetC
             Receive
           </button>
           <Link
-            href={'/swap'}
-            type="submit"
+            href={tokenIdentifier ? `/swap?sellAsset=${encodeURIComponent(tokenIdentifier)}` : '/swap'}
             className="flex flex-col items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 py-3 text-sm font-medium text-neutral-900 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700"
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-700">

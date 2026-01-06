@@ -1,6 +1,5 @@
 'use client'
 
-import axios from 'axios'
 import AssetDetails from '@/components/AssetDetails'
 import TransactionHistory from '@/components/TransactionHistory'
 import { Wallet } from '@turnkey/core'
@@ -8,6 +7,7 @@ import { CreateWalletButton } from '@/components/CreateWalletButton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useEffect, useState } from 'react'
 import { TokenBalance } from '@/app/api/types'
+import { fetchBalances } from '@/lib/api'
 
 interface MainContentProps {
   wallets: Wallet[]
@@ -34,10 +34,7 @@ export default function MainContent({ wallets }: MainContentProps) {
           for (const account of wallet.accounts) {
             if (account.addressFormat !== 'ADDRESS_FORMAT_ETHEREUM') continue
 
-            const response = await axios.get(
-              `/api/balances/?address=${account.address}&addressFormat=${account.addressFormat}`
-            )
-            const balances = response.data as TokenBalance[]
+            const balances = await fetchBalances(account.address, account.addressFormat)
 
             // Store balances for this account
             balancesByAccount[account.walletAccountId] = balances

@@ -5,35 +5,7 @@ import { ethers } from 'ethers'
 import { useTurnkey } from '@turnkey/react-wallet-kit'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useRouter } from 'next/navigation'
-
-type Token = {
-  identifier: string
-  address: string | null
-  chain: string
-  chainId: string
-  decimals: number
-  ticker: string
-  name: string
-}
-
-type QuoteRoute = {
-  expectedBuyAmount: string
-  estimatedTime: { total: number }
-  tx?: {
-    to?: string
-    value?: string
-    data?: string
-    gasPrice?: string
-  }
-  targetAddress?: string
-  inboundAddress?: string
-  memo?: string
-}
-
-type QuoteResponse = {
-  routes: QuoteRoute[]
-  providerErrors: Array<{ provider: string; error: string }>
-}
+import { fetchTokens, fetchBalances, fetchQuote, Token, QuoteRoute } from '@/lib/api'
 
 const chainAddressFormats: Record<string, string> = {
   ETH: 'ADDRESS_FORMAT_ETHEREUM',
@@ -99,13 +71,8 @@ export function SwapModal({
 
   // Fetch tokens
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/tokens?provider=THORCHAIN`, {
-      headers: {
-        'x-api-key': process.env.NEXT_PUBLIC_API_KEY || ''
-      }
-    })
-      .then(res => res.json())
-      .then((data: { tokens: Token[] }) => {
+    fetchTokens('THORCHAIN')
+      .then(data => {
         setTokens(data.tokens || [])
         if (data.tokens?.length > 0) {
           if (!fromToken || !data.tokens.find(t => t.identifier === fromToken)) {
@@ -129,12 +96,9 @@ export function SwapModal({
     const addressFormat = chainAddressFormats[fromTokenMeta.chain]
     if (!addressFormat) return
 
-    fetch(`/api/balances?${new URLSearchParams({ address, addressFormat })}`)
-      .then(res => res.json())
+    fetchBalances(address, addressFormat)
       .then(data => {
-        const tokenBalance = Array.isArray(data)
-          ? data.find((b: { token: { code: string } }) => b.token.code === fromTokenMeta.ticker)
-          : null
+        const tokenBalance = data.find(b => b.token.code === fromTokenMeta.ticker)
         setBalance(tokenBalance?.balance ? tokenBalance.balance.toFixed(6) : '0')
       })
       .catch(() => setBalance(null))
@@ -155,10 +119,8 @@ export function SwapModal({
     setIsFetchingQuote(true)
     setQuoteError(null)
 
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/quote`, {
-      method: 'POST',
-      headers: { 'x-api-key': process.env.NEXT_PUBLIC_API_KEY || '' },
-      body: JSON.stringify({
+    fetchQuote(
+      {
         sellAsset: fromTokenMeta.identifier,
         buyAsset: toTokenMeta.identifier,
         sellAmount: amount,
@@ -167,16 +129,9 @@ export function SwapModal({
         slippage: Number(slippage),
         providers: ['THORCHAIN'],
         dry: false
-      }),
-      signal: controller.signal
-    })
-      .then(async res => {
-        if (!res.ok) {
-          const errorText = await res.text()
-          throw new Error(`Quote request failed: ${res.status}`)
-        }
-        return res.json() as Promise<QuoteResponse>
-      })
+      },
+      controller.signal
+    )
       .then(data => {
         if (data.providerErrors?.length) {
           const errorMsg = data.providerErrors[0].error

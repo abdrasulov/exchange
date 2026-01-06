@@ -1,9 +1,9 @@
 'use client'
 
-import axios from 'axios'
 import Link from 'next/link'
 import { v1User } from '@turnkey/sdk-types'
 import { useState } from 'react'
+import { fetchVerificationStatus } from '@/lib/api'
 
 interface IdentityStatusProps {
   user: v1User
@@ -168,11 +168,9 @@ function StatusLoading() {
 export default function IdentityStatus({ user }: IdentityStatusProps) {
   const [verified, setVerified] = useState<boolean | null>(null)
 
-  axios
-    .get(`/api/verification/?userId=${user.userId}`)
+  fetchVerificationStatus(user.userId)
     .then(response => {
-      console.log(response.data.verified)
-      setVerified(response.data.verified)
+      setVerified(response.verified)
     })
     .catch(error => {
       console.error(error)

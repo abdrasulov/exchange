@@ -1,8 +1,7 @@
 'use client'
 
-import axios from 'axios'
 import { useEffect, useMemo, useState } from 'react'
-import { TransactionHistoryItem, TransactionHistoryResponse } from '@/app/api/types'
+import { TransactionHistoryItem } from '@/app/api/types'
 import { WalletAccount } from '@turnkey/core'
 import { ArrowDownLeft, ArrowUpRight, ExternalLink, Filter } from 'lucide-react'
 import {
@@ -14,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import { fetchTransactions } from '@/lib/api'
 
 interface TransactionHistoryProps {
   account: WalletAccount
@@ -37,19 +37,14 @@ export default function TransactionHistory({ account }: TransactionHistoryProps)
   }
 
   useEffect(() => {
-    fetchTransactions().catch(console.error)
+    fetchTransactionsData().catch(console.error)
   }, [address, addressFormat])
 
-  const fetchTransactions = async (nextPageKey?: string) => {
+  const fetchTransactionsData = async (nextPageKey?: string) => {
     setLoading(true)
 
     try {
-      let url = `/api/transactions?address=${address}&addressFormat=${addressFormat}`
-      if (nextPageKey) {
-        url += `&pageKey=${nextPageKey}`
-      }
-
-      const { data } = await axios.get<TransactionHistoryResponse>(url)
+      const data = await fetchTransactions(address, addressFormat, nextPageKey)
 
       if (nextPageKey) {
         setTransactions(prev => [...prev, ...data.transfers])
@@ -68,7 +63,7 @@ export default function TransactionHistory({ account }: TransactionHistoryProps)
 
   const loadMore = () => {
     if (pageKey) {
-      fetchTransactions(pageKey)
+      fetchTransactionsData(pageKey)
     }
   }
 

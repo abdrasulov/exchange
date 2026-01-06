@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react'
 import { WalletAccount } from '@turnkey/core'
 import { TokenBalance } from '@/app/api/types'
-
-import axios from 'axios'
+import { fetchBalances } from '@/lib/api'
 
 export function Balances(props: { account: WalletAccount }) {
   const account = props.account
@@ -14,7 +13,7 @@ export function Balances(props: { account: WalletAccount }) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchBalances = async () => {
+    const loadBalances = async () => {
       if (!account.address) {
         return
       }
@@ -23,11 +22,8 @@ export function Balances(props: { account: WalletAccount }) {
       setError(null)
 
       try {
-        const response = await axios.get(
-          `/api/balances/?address=${account.address}&addressFormat=${account.addressFormat}`
-        )
-
-        setBalances(response.data as TokenBalance[])
+        const data = await fetchBalances(account.address, account.addressFormat)
+        setBalances(data)
       } catch (e) {
         console.error(e)
         setError('Failed to load balances.')
@@ -36,7 +32,7 @@ export function Balances(props: { account: WalletAccount }) {
       }
     }
 
-    fetchBalances()
+    loadBalances()
   }, [account.address, account.addressFormat])
 
   return (

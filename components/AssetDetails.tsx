@@ -44,9 +44,9 @@ export default function AssetDetails({ account, balances, loading }: AssetDetail
 
   return (
     <div className="space-y-4">
-      {balances.map(token => (
+      {balances.map((token, i) => (
         <AssetCard
-          key={token.token.id}
+          key={i}
           name={token.token.name}
           code={token.token.code}
           amount={token.balance.toFixed(token.token.decimals).replace(/\.?0+$/, '')}

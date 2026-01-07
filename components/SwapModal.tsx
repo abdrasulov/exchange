@@ -4,22 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ethers } from 'ethers'
 import { useTurnkey } from '@turnkey/react-wallet-kit'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { useRouter } from 'next/navigation'
-import { fetchTokens, fetchBalances, fetchQuote, Token, QuoteRoute } from '@/lib/api'
+import { fetchBalances, fetchQuote, QuoteRoute } from '@/lib/api'
+import { createApprovalTransaction } from '@/lib/erc20'
+import { chainAddressFormats, rpcUrls } from '@/lib/chains'
+import { useQuote } from '@/hooks/use-quote'
+import { useSimulation } from '@/hooks/use-simulation'
+import { useTokens } from '@/hooks/use-tokens'
+import { SwapApproval, SwapConfirm, SwapForm, SwapProgress, SwapSuccess } from '@/components/swap'
 
-const chainAddressFormats: Record<string, string> = {
-  ETH: 'ADDRESS_FORMAT_ETHEREUM',
-  BSC: 'ADDRESS_FORMAT_ETHEREUM',
-  AVAX: 'ADDRESS_FORMAT_ETHEREUM',
-  BASE: 'ADDRESS_FORMAT_ETHEREUM',
-  ARB: 'ADDRESS_FORMAT_ETHEREUM'
-}
-
-const rpcUrls: Record<string, string> = {
-  ETH: 'https://ethereum-rpc.publicnode.com',
-  BSC: 'https://bsc-rpc.publicnode.com',
-  AVAX: 'https://avalanche-c-chain-rpc.publicnode.com'
-}
+type SwapStep = 'form' | 'confirm' | 'approve' | 'approving' | 'swapping' | 'success'
 
 export function SwapModal({
   open,
@@ -30,22 +23,21 @@ export function SwapModal({
   onOpenChange: (open: boolean) => void
   sellAsset?: string
 }) {
-  const router = useRouter()
   const { wallets, signAndSendTransaction } = useTurnkey()
+  const { tokens } = useTokens()
 
-  const [tokens, setTokens] = useState<Token[]>([])
   const [fromToken, setFromToken] = useState<string>(sellAsset || '')
   const [toToken, setToToken] = useState<string>('')
   const [amount, setAmount] = useState('')
   const [slippage, setSlippage] = useState('1')
-
   const [balance, setBalance] = useState<string | null>(null)
-  const [estimatedReceive, setEstimatedReceive] = useState<string | null>(null)
-  const [quoteError, setQuoteError] = useState<string | null>(null)
-  const [isFetchingQuote, setIsFetchingQuote] = useState(false)
-  const [bestRoute, setBestRoute] = useState<QuoteRoute | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
+  const [swapStep, setSwapStep] = useState<SwapStep>('form')
+  const [approvalTxHash, setApprovalTxHash] = useState<string | null>(null)
+  const [swapTxHash, setSwapTxHash] = useState<string | null>(null)
+  const [confirmQuote, setConfirmQuote] = useState<QuoteRoute | null>(null)
+  const [isConfirmQuoteLoading, setIsConfirmQuoteLoading] = useState(false)
+  const [confirmQuoteError, setConfirmQuoteError] = useState<string | null>(null)
 
   const fromTokenMeta = useMemo(() => tokens.find(t => t.identifier === fromToken), [fromToken, tokens])
   const toTokenMeta = useMemo(() => tokens.find(t => t.identifier === toToken), [toToken, tokens])
@@ -69,30 +61,53 @@ export function SwapModal({
     [resolveAccountForChain]
   )
 
-  // Fetch tokens
+  const sourceAddress = fromTokenMeta ? resolveAddressForChain(fromTokenMeta.chain) : null
+  const destinationAddress = toTokenMeta ? resolveAddressForChain(toTokenMeta.chain) : null
+
+  const {
+    quote: previewQuote,
+    isLoading: isPreviewQuoteLoading,
+    error: previewQuoteError
+  } = useQuote({
+    sellAsset: fromTokenMeta?.identifier,
+    buyAsset: toTokenMeta?.identifier,
+    sellAmount: amount,
+    slippage: Number(slippage),
+    sourceAddress: sourceAddress || undefined,
+    destinationAddress: destinationAddress || undefined,
+    providers: ['THORCHAIN'],
+    dry: true
+  })
+
+  const {
+    needsApproval,
+    approveData,
+    isLoading: isSimulating,
+    refetch: refetchSimulation
+  } = useSimulation({
+    quote: previewQuote,
+    fromToken: fromTokenMeta,
+    amount,
+    sourceAddress
+  })
+
+  // Set default tokens when tokens load
   useEffect(() => {
-    fetchTokens('THORCHAIN')
-      .then(data => {
-        setTokens(data.tokens || [])
-        if (data.tokens?.length > 0) {
-          if (!fromToken || !data.tokens.find(t => t.identifier === fromToken)) {
-            setFromToken(data.tokens[0].identifier)
-          }
-          if (!toToken) {
-            const differentToken = data.tokens.find(t => t.identifier !== (fromToken || data.tokens[0].identifier))
-            setToToken(differentToken?.identifier || data.tokens[1]?.identifier || '')
-          }
-        }
-      })
-      .catch(console.error)
-  }, [fromToken, toToken])
+    if (tokens.length === 0) return
+    if (!fromToken || !tokens.find(t => t.identifier === fromToken)) {
+      setFromToken(tokens[0].identifier)
+    }
+    if (!toToken) {
+      const differentToken = tokens.find(t => t.identifier !== (fromToken || tokens[0].identifier))
+      setToToken(differentToken?.identifier || tokens[1]?.identifier || '')
+    }
+  }, [tokens, fromToken, toToken])
 
   // Fetch balance
   useEffect(() => {
     if (!fromTokenMeta) return
     const address = resolveAddressForChain(fromTokenMeta.chain)
     if (!address) return
-
     const addressFormat = chainAddressFormats[fromTokenMeta.chain]
     if (!addressFormat) return
 
@@ -104,66 +119,175 @@ export function SwapModal({
       .catch(() => setBalance(null))
   }, [fromTokenMeta, resolveAddressForChain])
 
-  // Fetch quote
+  // Reset state when dialog closes
   useEffect(() => {
-    if (!amount || !fromTokenMeta || !toTokenMeta) {
-      setEstimatedReceive(null)
-      setBestRoute(null)
-      return
+    if (!open) {
+      setSwapStep('form')
+      setConfirmQuote(null)
+      setConfirmQuoteError(null)
+      setApprovalTxHash(null)
+      setSwapTxHash(null)
+      setStatus(null)
     }
+  }, [open])
 
-    const destinationAddress = resolveAddressForChain(toTokenMeta.chain)
-    if (!destinationAddress) return
+  const fetchConfirmQuote = async () => {
+    if (!fromTokenMeta || !toTokenMeta || !destinationAddress) return
 
-    const controller = new AbortController()
-    setIsFetchingQuote(true)
-    setQuoteError(null)
+    setIsConfirmQuoteLoading(true)
+    setConfirmQuoteError(null)
 
-    fetchQuote(
-      {
+    try {
+      const response = await fetchQuote({
         sellAsset: fromTokenMeta.identifier,
         buyAsset: toTokenMeta.identifier,
         sellAmount: amount,
         destinationAddress,
-        sourceAddress: resolveAddressForChain(fromTokenMeta.chain) || undefined,
+        sourceAddress: sourceAddress || undefined,
         slippage: Number(slippage),
         providers: ['THORCHAIN'],
         dry: false
-      },
-      controller.signal
-    )
-      .then(data => {
-        if (data.providerErrors?.length) {
-          const errorMsg = data.providerErrors[0].error
-          setQuoteError(typeof errorMsg === 'string' ? errorMsg : 'Quote error')
-          setEstimatedReceive(null)
-          setBestRoute(null)
-          return
-        }
-        const best = data.routes?.reduce<QuoteRoute | null>(
-          (acc, r) => (!acc || Number(r.expectedBuyAmount) > Number(acc.expectedBuyAmount) ? r : acc),
-          null
-        )
-        setEstimatedReceive(best?.expectedBuyAmount || null)
-        setBestRoute(best || null)
       })
-      .catch(err => {
-        if (err.name !== 'AbortError') {
-          const errorMsg = err instanceof Error ? err.message : 'Failed to fetch quote'
-          setQuoteError(errorMsg)
-          setEstimatedReceive(null)
-          setBestRoute(null)
-        }
+
+      if (response.providerErrors?.length) {
+        const errorMsg = response.providerErrors[0].error
+        throw new Error(typeof errorMsg === 'string' ? errorMsg : 'Quote error')
+      }
+
+      const best = response.routes?.reduce<QuoteRoute | null>(
+        (acc, r) => (!acc || Number(r.expectedBuyAmount) > Number(acc.expectedBuyAmount) ? r : acc),
+        null
+      )
+
+      if (!best) throw new Error('No valid routes found')
+
+      setConfirmQuote(best)
+      setSwapStep('confirm')
+    } catch (err) {
+      setConfirmQuoteError(err instanceof Error ? err.message : 'Failed to fetch confirmation quote')
+    } finally {
+      setIsConfirmQuoteLoading(false)
+    }
+  }
+
+  const handleFormSubmit = async () => {
+    if (needsApproval && fromTokenMeta?.address) {
+      await handleFormApprove()
+    } else {
+      await fetchConfirmQuote()
+    }
+  }
+
+  const handleFormApprove = async () => {
+    if (!fromTokenMeta?.address || !approveData) return
+
+    const walletAccount = resolveAccountForChain(fromTokenMeta.chain)
+    const rpcUrl = rpcUrls[fromTokenMeta.chain]
+    const address = resolveAddressForChain(fromTokenMeta.chain)
+
+    if (!walletAccount || !rpcUrl || !address) {
+      setStatus('Wallet or RPC not configured')
+      return
+    }
+
+    setSwapStep('approving')
+    setStatus(null)
+
+    try {
+      const provider = new ethers.JsonRpcProvider(rpcUrl)
+      const nonce = await provider.getTransactionCount(address, 'latest')
+      const feeData = await provider.getFeeData()
+
+      const { unsignedTransaction } = createApprovalTransaction(
+        fromTokenMeta.address,
+        approveData.spender,
+        amount,
+        fromTokenMeta.decimals,
+        address,
+        Number(fromTokenMeta.chainId),
+        nonce,
+        feeData
+      )
+
+      const hash = await signAndSendTransaction({
+        unsignedTransaction,
+        transactionType: 'TRANSACTION_TYPE_ETHEREUM',
+        walletAccount,
+        rpcUrl
       })
-      .finally(() => setIsFetchingQuote(false))
 
-    return () => controller.abort()
-  }, [amount, fromTokenMeta, toTokenMeta, slippage, resolveAddressForChain])
+      setApprovalTxHash(hash)
+      await provider.waitForTransaction(hash)
+      refetchSimulation()
+      setSwapStep('form')
+    } catch (error) {
+      setStatus(`Approval failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setSwapStep('form')
+    }
+  }
 
-  const handleSwap = async () => {
-    if (!fromTokenMeta || !toTokenMeta || !bestRoute) return
+  const handleConfirmSwap = async () => {
+    if (!fromTokenMeta || !toTokenMeta || !confirmQuote) return
 
-    if (bestRoute.tx) {
+    if (needsApproval && fromTokenMeta.address) {
+      setSwapStep('approve')
+      return
+    }
+
+    await executeSwap()
+  }
+
+  const handleApprovalSubmit = async () => {
+    if (!fromTokenMeta?.address || !approveData) return
+
+    const walletAccount = resolveAccountForChain(fromTokenMeta.chain)
+    const rpcUrl = rpcUrls[fromTokenMeta.chain]
+    const address = resolveAddressForChain(fromTokenMeta.chain)
+
+    if (!walletAccount || !rpcUrl || !address) {
+      setStatus('Wallet or RPC not configured')
+      return
+    }
+
+    setSwapStep('approving')
+    setStatus(null)
+
+    try {
+      const provider = new ethers.JsonRpcProvider(rpcUrl)
+      const nonce = await provider.getTransactionCount(address, 'latest')
+      const feeData = await provider.getFeeData()
+
+      const { unsignedTransaction } = createApprovalTransaction(
+        fromTokenMeta.address,
+        approveData.spender,
+        amount,
+        fromTokenMeta.decimals,
+        address,
+        Number(fromTokenMeta.chainId),
+        nonce,
+        feeData
+      )
+
+      const hash = await signAndSendTransaction({
+        unsignedTransaction,
+        transactionType: 'TRANSACTION_TYPE_ETHEREUM',
+        walletAccount,
+        rpcUrl
+      })
+
+      setApprovalTxHash(hash)
+      await provider.waitForTransaction(hash)
+      await executeSwap()
+    } catch (error) {
+      setStatus(`Approval failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setSwapStep('approve')
+    }
+  }
+
+  const executeSwap = async () => {
+    if (!fromTokenMeta || !toTokenMeta || !confirmQuote) return
+
+    if (confirmQuote.tx) {
       const walletAccount = resolveAccountForChain(fromTokenMeta.chain)
       const rpcUrl = rpcUrls[fromTokenMeta.chain]
       if (!walletAccount || !rpcUrl) {
@@ -171,22 +295,19 @@ export function SwapModal({
         return
       }
 
-      setIsSubmitting(true)
+      setSwapStep('swapping')
       setStatus('Submitting swap...')
 
       try {
-        const { to, value, data, gasPrice } = bestRoute.tx
+        const { to, value, data, gasPrice } = confirmQuote.tx
         const provider = new ethers.JsonRpcProvider(rpcUrl)
-        const sourceAddress = resolveAddressForChain(fromTokenMeta.chain)
-        if (!sourceAddress) throw new Error('Source address not found')
+        const address = resolveAddressForChain(fromTokenMeta.chain)
+        if (!address) throw new Error('Source address not found')
 
-        const nonce = await provider.getTransactionCount(sourceAddress, 'latest')
-
-        // Get fee data from the network
+        const nonce = await provider.getTransactionCount(address, 'latest')
         const feeData = await provider.getFeeData()
 
-        // Use EIP-1559 if available, otherwise legacy
-        let txParams: any = {
+        const txParams: any = {
           to,
           value: value || 0,
           data: data || '0x',
@@ -195,38 +316,40 @@ export function SwapModal({
           gasLimit: 300000
         }
 
-        // Prefer EIP-1559 transaction type
         if (feeData.maxFeePerGas && feeData.maxPriorityFeePerGas) {
           txParams.maxFeePerGas = feeData.maxFeePerGas
           txParams.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas
           txParams.type = 2
         } else {
-          // Fallback to legacy transaction with gasPrice
           txParams.gasPrice = gasPrice || feeData.gasPrice
           txParams.type = 0
         }
 
         const unsignedTransaction = ethers.Transaction.from(txParams).unsignedSerialized
 
-        await signAndSendTransaction({
+        const hash = await signAndSendTransaction({
           unsignedTransaction,
           transactionType: 'TRANSACTION_TYPE_ETHEREUM',
           walletAccount,
           rpcUrl
         })
-        setStatus('Transaction submitted!')
-        setTimeout(() => onOpenChange(false), 2000)
+
+        setSwapTxHash(hash)
+        await provider.waitForTransaction(hash)
+        setSwapStep('success')
+        setTimeout(() => onOpenChange(false), 3000)
       } catch (error) {
         setStatus(`Swap failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
-      } finally {
-        setIsSubmitting(false)
+        setSwapStep('confirm')
       }
     } else {
       setStatus(
-        `Send ${amount} ${fromTokenMeta.ticker} to ${bestRoute.targetAddress || bestRoute.inboundAddress || 'N/A'} with memo: ${bestRoute.memo || 'N/A'}`
+        `Send ${amount} ${fromTokenMeta.ticker} to ${confirmQuote.targetAddress || confirmQuote.inboundAddress || 'N/A'} with memo: ${confirmQuote.memo || 'N/A'}`
       )
     }
   }
+
+  const displayError = previewQuoteError?.message || confirmQuoteError
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -235,99 +358,65 @@ export function SwapModal({
           <DialogTitle>Swap Tokens</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* From Token */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">From</label>
-            <select
-              value={fromToken}
-              onChange={e => setFromToken(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-            >
-              {tokens.map(token => (
-                <option key={token.identifier} value={token.identifier}>
-                  {token.ticker} - {token.name} ({token.chain})
-                </option>
-              ))}
-            </select>
-          </div>
+        {swapStep === 'form' && (
+          <SwapForm
+            tokens={tokens}
+            fromToken={fromToken}
+            toToken={toToken}
+            amount={amount}
+            slippage={slippage}
+            balance={balance}
+            fromTokenMeta={fromTokenMeta}
+            toTokenMeta={toTokenMeta}
+            previewQuote={previewQuote}
+            isLoading={isPreviewQuoteLoading || isConfirmQuoteLoading || isSimulating}
+            needsApproval={needsApproval}
+            error={displayError}
+            onFromTokenChange={setFromToken}
+            onToTokenChange={setToToken}
+            onAmountChange={setAmount}
+            onSlippageChange={setSlippage}
+            onSubmit={handleFormSubmit}
+          />
+        )}
 
-          {/* To Token */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">To</label>
-            <select
-              value={toToken}
-              onChange={e => setToToken(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-            >
-              {tokens.map(token => (
-                <option key={token.identifier} value={token.identifier}>
-                  {token.ticker} - {token.name} ({token.chain})
-                </option>
-              ))}
-            </select>
-          </div>
+        {swapStep === 'confirm' && confirmQuote && (
+          <SwapConfirm
+            amount={amount}
+            fromTokenMeta={fromTokenMeta}
+            toTokenMeta={toTokenMeta}
+            confirmQuote={confirmQuote}
+            needsApproval={needsApproval}
+            status={status}
+            onBack={() => {
+              setSwapStep('form')
+              setConfirmQuote(null)
+            }}
+            onConfirm={handleConfirmSwap}
+          />
+        )}
 
-          {/* Amount */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Amount</label>
-              {balance && (
-                <span className="text-xs text-slate-500">
-                  Balance: {balance} {fromTokenMeta?.ticker}
-                </span>
-              )}
-            </div>
-            <input
-              type="number"
-              min="0"
-              step="any"
-              placeholder="0.0"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-4 py-2"
-            />
-          </div>
-
-          {/* Slippage */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Slippage (%)</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              value={slippage}
-              onChange={e => setSlippage(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-4 py-2"
-            />
-          </div>
-
-          {/* Estimated Receive */}
-          {estimatedReceive && (
-            <div className="rounded-lg bg-blue-50 p-3">
-              <p className="text-xs text-slate-600">You will receive</p>
-              <p className="text-lg font-semibold">
-                {estimatedReceive} {toTokenMeta?.ticker}
-              </p>
-              {bestRoute?.estimatedTime && (
-                <p className="text-xs text-slate-500">Est. time: ~{bestRoute.estimatedTime.total}s</p>
-              )}
-            </div>
-          )}
-
-          {quoteError && <p className="text-sm text-red-500">{quoteError}</p>}
-          {status && <p className="text-sm text-slate-600">{status}</p>}
-
-          {/* Swap Button */}
-          <button
-            onClick={handleSwap}
-            disabled={isSubmitting || isFetchingQuote || !bestRoute}
-            className="w-full rounded-lg bg-blue-600 py-2.5 font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSubmitting ? 'Submitting...' : 'Swap'}
-          </button>
-        </div>
+        {swapStep === 'approve' && (
+          <SwapApproval
+            amount={amount}
+            fromTokenMeta={fromTokenMeta}
+            approveData={approveData}
+            status={status}
+            onBack={() => setSwapStep('confirm')}
+            onApprove={handleApprovalSubmit}
+          />
+        )}
+        {swapStep === 'approving' && <SwapProgress type="approving" />}
+        {swapStep === 'swapping' && <SwapProgress type="swapping" approvalConfirmed={!!approvalTxHash} />}
+        {swapStep === 'success' && (
+          <SwapSuccess
+            amount={amount}
+            fromTokenMeta={fromTokenMeta}
+            toTokenMeta={toTokenMeta}
+            confirmQuote={confirmQuote}
+            swapTxHash={swapTxHash}
+          />
+        )}
       </DialogContent>
     </Dialog>
   )

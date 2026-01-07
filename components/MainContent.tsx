@@ -21,8 +21,7 @@ export default function MainContent({ wallets }: MainContentProps) {
   useEffect(() => {
     const fetchAllBalances = async () => {
       if (wallets.length === 0) {
-        setIsLoadingBalance(false)
-        return
+        return setIsLoadingBalance(false)
       }
 
       setIsLoadingBalance(true)
@@ -100,23 +99,26 @@ export default function MainContent({ wallets }: MainContentProps) {
               </TabsList>
               <TabsContent value="assets">
                 <div className="space-y-4">
-                  {wallets.map(wallet =>
-                    wallet.accounts.map(account => (
-                      <AssetDetails
-                        account={account}
-                        key={account.walletAccountId}
-                        balances={accountBalances[account.walletAccountId] || []}
-                        loading={isLoadingBalance}
-                      />
-                    ))
-                  )}
+                  {wallets.map(wallet => (
+                    <div key={wallet.walletId}>
+                      <div className="mb-2">{wallet.walletName}</div>
+                      {wallet.accounts.map((account, index) => (
+                        <AssetDetails
+                          account={account}
+                          key={index}
+                          balances={accountBalances[account.walletAccountId] || []}
+                          loading={isLoadingBalance}
+                        />
+                      ))}
+                    </div>
+                  ))}
                 </div>
               </TabsContent>
               <TabsContent value="history">
                 <div className="space-y-6">
                   {wallets.map(wallet =>
-                    wallet.accounts.map(account => (
-                      <div key={account.walletAccountId}>
+                    wallet.accounts.map((account, i) => (
+                      <div key={i}>
                         <h3 className="mb-3 text-sm font-medium text-neutral-500 dark:text-neutral-400">
                           {account.addressFormat.replace('ADDRESS_FORMAT_', '')} - {account.address.slice(0, 6)}...
                           {account.address.slice(-4)}

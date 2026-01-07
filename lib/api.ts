@@ -62,6 +62,9 @@ export type QuoteRoute = {
   targetAddress?: string
   inboundAddress?: string
   memo?: string
+  meta?: {
+    approvalAddress?: string
+  }
 }
 
 export type QuoteResponse = {

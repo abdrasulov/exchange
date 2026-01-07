@@ -1,0 +1,30 @@
+export const chainAddressFormats: Record<string, string> = {
+  ETH: 'ADDRESS_FORMAT_ETHEREUM',
+  BSC: 'ADDRESS_FORMAT_ETHEREUM',
+  AVAX: 'ADDRESS_FORMAT_ETHEREUM',
+  BASE: 'ADDRESS_FORMAT_ETHEREUM',
+  ARB: 'ADDRESS_FORMAT_ETHEREUM'
+}
+
+export const rpcUrls: Record<string, string> = {
+  ETH: 'https://ethereum-rpc.publicnode.com',
+  BSC: 'https://bsc-rpc.publicnode.com',
+  AVAX: 'https://avalanche-c-chain-rpc.publicnode.com',
+  BASE: 'https://base-rpc.publicnode.com',
+  ARB: 'https://arbitrum-one-rpc.publicnode.com'
+}
+
+export const EVM_CHAINS = ['ETH', 'BSC', 'AVAX', 'BASE', 'ARB']
+
+export const blockExplorers: Record<string, string> = {
+  ETH: 'https://etherscan.io',
+  BSC: 'https://bscscan.com',
+  AVAX: 'https://snowtrace.io',
+  BASE: 'https://basescan.org',
+  ARB: 'https://arbiscan.io'
+}
+
+export function getExplorerTxUrl(chain: string, txHash: string): string {
+  const explorer = blockExplorers[chain] || blockExplorers.ETH
+  return `${explorer}/tx/${txHash}`
+}

@@ -1,6 +1,7 @@
 'use client'
 
 import { TurnkeyProvider, TurnkeyProviderConfig } from '@turnkey/react-wallet-kit'
+import { ReactQueryProvider } from '@/components/react-query/react-query-provider'
 
 const turnkeyConfig: TurnkeyProviderConfig = {
   organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
@@ -9,16 +10,18 @@ const turnkeyConfig: TurnkeyProviderConfig = {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <TurnkeyProvider
-      config={turnkeyConfig}
-      callbacks={{
-        onAuthenticationSuccess: ({ session }) => {
-          console.log('User authenticated:', session)
-        },
-        onError: error => console.error('Turnkey error:', error)
-      }}
-    >
-      {children}
-    </TurnkeyProvider>
+    <ReactQueryProvider>
+      <TurnkeyProvider
+        config={turnkeyConfig}
+        callbacks={{
+          onAuthenticationSuccess: ({ session }) => {
+            console.log('User authenticated:', session)
+          },
+          onError: error => console.error('Turnkey error:', error)
+        }}
+      >
+        {children}
+      </TurnkeyProvider>
+    </ReactQueryProvider>
   )
 }

@@ -15,11 +15,6 @@ interface AssetDetailsProps {
 
 export default function AssetDetails({ account, balances, loading }: AssetDetailsProps) {
   const address = account.address
-
-  if (account.addressFormat != 'ADDRESS_FORMAT_ETHEREUM') {
-    return <div />
-  }
-
   const [sendOpen, setSendOpen] = useState(false)
   const [sendToken, setSendToken] = useState<TokenBalance | null>(null)
   const [receiveOpen, setReceiveOpen] = useState(false)

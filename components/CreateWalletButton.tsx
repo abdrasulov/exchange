@@ -7,12 +7,7 @@ export function CreateWalletButton() {
     try {
       const walletId = await createWallet({
         walletName: 'My New Wallet',
-        accounts: [
-          'ADDRESS_FORMAT_ETHEREUM',
-          'ADDRESS_FORMAT_SOLANA',
-          'ADDRESS_FORMAT_BITCOIN_MAINNET_P2WPKH',
-          'ADDRESS_FORMAT_BITCOIN_MAINNET_P2WSH'
-        ]
+        accounts: ['ADDRESS_FORMAT_ETHEREUM', 'ADDRESS_FORMAT_SOLANA', 'ADDRESS_FORMAT_BITCOIN_MAINNET_P2WPKH']
       })
       console.log('Wallet created:', walletId)
     } catch (error) {

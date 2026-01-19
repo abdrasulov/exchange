@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { TransactionHistoryItem } from '@/app/api/types'
+import { BlockchainType, TransactionHistoryItem } from '@/app/api/types'
 import { WalletAccount } from '@turnkey/core'
 import { ArrowDownLeft, ArrowUpRight, ExternalLink, Filter } from 'lucide-react'
 import {
@@ -31,10 +31,6 @@ export default function TransactionHistory({ account }: TransactionHistoryProps)
 
   const address = account.address
   const addressFormat = account.addressFormat
-
-  if (account.addressFormat != 'ADDRESS_FORMAT_ETHEREUM') {
-    return <div className="text-sm text-neutral-500">Transaction history not available for this network</div>
-  }
 
   useEffect(() => {
     fetchTransactionsData().catch(console.error)
@@ -84,8 +80,17 @@ export default function TransactionHistory({ account }: TransactionHistoryProps)
     return `${value.toFixed(6).replace(/\.?0+$/, '')} ${asset || ''}`
   }
 
-  const getExplorerUrl = (hash: string) => {
-    return `https://etherscan.io/tx/${hash}`
+  const getExplorerUrl = (tx: TransactionHistoryItem) => {
+    switch (tx.chain) {
+      case BlockchainType.Ethereum:
+        return `https://etherscan.io/tx/${tx.hash}`
+      case BlockchainType.Solana:
+        return `https://solscan.io/tx/${tx.hash}`
+      case BlockchainType.Bitcoin:
+        return `https://blockchain.info/tx/${tx.hash}`
+      default:
+        return `https://etherscan.io/tx/${tx.hash}`
+    }
   }
 
   const isIncoming = (tx: TransactionHistoryItem) => {
@@ -252,7 +257,7 @@ export default function TransactionHistory({ account }: TransactionHistoryProps)
                     {formatValue(tx.value, tx.asset)}
                   </p>
                   <a
-                    href={getExplorerUrl(tx.hash)}
+                    href={getExplorerUrl(tx)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"

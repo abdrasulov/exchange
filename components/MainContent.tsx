@@ -98,7 +98,7 @@ export default function MainContent({ wallets }: MainContentProps) {
               <TabsContent value="assets">
                 <div className="space-y-4">
                   {wallets.map(wallet => (
-                    <div key={wallet.walletId}>
+                    <div className="space-y-4" key={wallet.walletId}>
                       <div className="mb-2">{wallet.walletName}</div>
                       {wallet.accounts.map((account, index) => (
                         <AssetDetails

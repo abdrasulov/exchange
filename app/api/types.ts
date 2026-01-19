@@ -73,7 +73,7 @@ export class TokenTypeSpl implements TokenType {
 
 export interface TransactionHistoryItem {
   uniqueId: string
-  category: 'external' | 'internal' | 'erc20'
+  category: 'external' | 'internal' | 'erc20' | 'spl' | 'native'
   blockNum: string
   timestamp: string
   from: string
@@ -81,6 +81,7 @@ export interface TransactionHistoryItem {
   value: number | null
   asset: string | null
   hash: string
+  chain: BlockchainType
   rawContract: {
     address: string | null
     decimal: string | null

@@ -5,7 +5,7 @@ import TransactionHistory from '@/components/TransactionHistory'
 import { Wallet } from '@turnkey/core'
 import { CreateWalletButton } from '@/components/CreateWalletButton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { TokenBalance } from '@/app/api/types'
 import { fetchBalances } from '@/lib/api'
 
@@ -17,6 +17,22 @@ export default function MainContent({ wallets }: MainContentProps) {
   const [totalBalance, setTotalBalance] = useState<number>(0)
   const [isLoadingBalance, setIsLoadingBalance] = useState<boolean>(true)
   const [accountBalances, setAccountBalances] = useState<Record<string, TokenBalance[]>>({})
+
+  const uniqueWallets = useMemo(() => {
+    return wallets.map(wallet => {
+      const seen = new Set<string>()
+      const uniqueAccounts = wallet.accounts.filter(account => {
+        if (seen.has(account.walletAccountId)) {
+          return false
+        }
+
+        seen.add(account.walletAccountId)
+        return true
+      })
+
+      return { ...wallet, accounts: uniqueAccounts }
+    })
+  }, [wallets])
 
   useEffect(() => {
     const fetchAllBalances = async () => {
@@ -97,13 +113,13 @@ export default function MainContent({ wallets }: MainContentProps) {
               </TabsList>
               <TabsContent value="assets">
                 <div className="space-y-4">
-                  {wallets.map(wallet => (
+                  {uniqueWallets.map(wallet => (
                     <div className="space-y-4" key={wallet.walletId}>
                       <div className="mb-2">{wallet.walletName}</div>
-                      {wallet.accounts.map((account, index) => (
+                      {wallet.accounts.map(account => (
                         <AssetDetails
                           account={account}
-                          key={index}
+                          key={account.walletAccountId}
                           balances={accountBalances[account.walletAccountId] || []}
                           loading={isLoadingBalance}
                         />
@@ -114,9 +130,9 @@ export default function MainContent({ wallets }: MainContentProps) {
               </TabsContent>
               <TabsContent value="history">
                 <div className="space-y-6">
-                  {wallets.map(wallet =>
-                    wallet.accounts.map((account, i) => (
-                      <div key={i}>
+                  {uniqueWallets.map(wallet =>
+                    wallet.accounts.map(account => (
+                      <div key={account.walletAccountId}>
                         <h3 className="mb-3 text-sm font-medium text-neutral-500 dark:text-neutral-400">
                           {account.addressFormat.replace('ADDRESS_FORMAT_', '')} - {account.address.slice(0, 6)}...
                           {account.address.slice(-4)}

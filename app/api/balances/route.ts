@@ -1,22 +1,14 @@
 import { NextRequest } from 'next/server'
-import { Token, TokenBalance, TokenTypeEip20 } from '@/app/api/types'
+import { BlockchainType, Token, TokenBalance, TokenTypeEip20, TokenTypeNative } from '@/app/api/types'
 import { Alchemy, Network } from 'alchemy-sdk'
-import { getNativeToken, getSupportedTokens } from '@/app/api/tokens'
 
-const coinGeckoIds: Record<string, string> = {
-  ETH: 'ethereum',
-  USDT: 'tether',
-  USDC: 'usd-coin'
-}
+async function fetchTokenPrices(contractAddresses: string[]): Promise<Record<string, number>> {
+  if (contractAddresses.length === 0) return {}
 
-async function fetchTokenPrices(tokenCodes: string[]): Promise<Record<string, number>> {
   try {
-    const geckoIds = tokenCodes.map(code => coinGeckoIds[code]).filter(Boolean)
-    if (geckoIds.length === 0) return {}
-
     const response = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${geckoIds.join(',')}&vs_currencies=usd`,
-      { next: { revalidate: 60 } } // Cache for 60 seconds
+      `https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=${contractAddresses.join(',')}&vs_currencies=usd`,
+      { next: { revalidate: 60 } }
     )
 
     if (!response.ok) {
@@ -27,10 +19,10 @@ async function fetchTokenPrices(tokenCodes: string[]): Promise<Record<string, nu
     const data = await response.json()
     const prices: Record<string, number> = {}
 
-    for (const code in coinGeckoIds) {
-      const geckoId = coinGeckoIds[code]
-      if (data[geckoId]?.usd) {
-        prices[code] = data[geckoId].usd
+    for (const address of contractAddresses) {
+      const lowerAddress = address.toLowerCase()
+      if (data[lowerAddress]?.usd) {
+        prices[lowerAddress] = data[lowerAddress].usd
       }
     }
 
@@ -38,6 +30,21 @@ async function fetchTokenPrices(tokenCodes: string[]): Promise<Record<string, nu
   } catch (error) {
     console.error('Error fetching token prices:', error)
     return {}
+  }
+}
+
+async function fetchEthPrice(): Promise<number | undefined> {
+  try {
+    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd', {
+      next: { revalidate: 60 }
+    })
+
+    if (!response.ok) return undefined
+
+    const data = await response.json()
+    return data.ethereum?.usd
+  } catch {
+    return undefined
   }
 }
 
@@ -70,53 +77,64 @@ export async function GET(request: NextRequest) {
   const balances: TokenBalance[] = []
 
   try {
-    const nativeToken = getNativeToken(addressFormat)
-    if (nativeToken) {
-      // ETH balance
-      const balanceWei = await alchemy.core.getBalance(address)
-      const balanceEth = Number(balanceWei) / Math.pow(10, Number(nativeToken.decimals))
+    // Fetch native ETH balance
+    const balanceWei = await alchemy.core.getBalance(address)
+    const balanceEth = Number(balanceWei) / Math.pow(10, 18)
+    const ethToken = new Token('ETH', 'Ethereum', 18, BlockchainType.Ethereum, new TokenTypeNative())
+
+    balances.push({
+      balance: balanceEth,
+      token: ethToken
+    })
+
+    // Fetch all ERC-20 token balances
+    const tokensResponse = await alchemy.core.getTokensForOwner(address)
+
+    for (const ownedToken of tokensResponse.tokens) {
+      if (!ownedToken.contractAddress || !ownedToken.balance) continue
+
+      const balance = parseFloat(ownedToken.balance)
+      if (balance === 0) continue
+
+      const token = new Token(
+        ownedToken.symbol || 'UNKNOWN',
+        ownedToken.name || 'Unknown Token',
+        ownedToken.decimals ?? 18,
+        BlockchainType.Ethereum,
+        new TokenTypeEip20(ownedToken.contractAddress)
+      )
+
       balances.push({
-        balance: balanceEth,
-        token: nativeToken
+        balance,
+        token
       })
-    }
-
-    const tokens = getSupportedTokens(addressFormat)
-    if (tokens.length > 0) {
-      const contractAddresses = tokens.map((token: Token) => {
-        return (token.tokenType as TokenTypeEip20).contractAddress
-      })
-      // ERC-20 token balances
-      const { tokenBalances } = await alchemy.core.getTokenBalances(address, contractAddresses)
-
-      for (const token of tokens) {
-        const tokenBalance = tokenBalances.find(balance => {
-          return balance.contractAddress == (token.tokenType as TokenTypeEip20).contractAddress
-        })
-
-        const balanceString = tokenBalance?.tokenBalance ?? '0'
-        const balance = Number(balanceString) / Math.pow(10, Number(token.decimals))
-
-        balances.push({
-          balance: balance,
-          token: token
-        })
-      }
     }
   } catch (e) {
     console.error(e)
   }
 
-  // Fetch prices for all tokens
-  const tokenCodes = balances.map(b => b.token.code)
-  const prices = await fetchTokenPrices(tokenCodes)
+  // Fetch prices for ERC-20 tokens
+  const contractAddresses = balances
+    .filter(b => b.token.tokenType instanceof TokenTypeEip20)
+    .map(b => (b.token.tokenType as TokenTypeEip20).contractAddress)
+
+  const [tokenPrices, ethPrice] = await Promise.all([fetchTokenPrices(contractAddresses), fetchEthPrice()])
 
   // Add USD price and value to each balance
-  const balancesWithPrices = balances.map(balance => ({
-    ...balance,
-    usdPrice: prices[balance.token.code],
-    usdValue: prices[balance.token.code] ? balance.balance * prices[balance.token.code] : undefined
-  }))
+  const balancesWithPrices = balances.map(balance => {
+    let usdPrice: number | undefined
+    if (balance.token.tokenType instanceof TokenTypeNative) {
+      usdPrice = ethPrice
+    } else if (balance.token.tokenType instanceof TokenTypeEip20) {
+      usdPrice = tokenPrices[balance.token.tokenType.contractAddress.toLowerCase()]
+    }
+
+    return {
+      ...balance,
+      usdPrice,
+      usdValue: usdPrice ? balance.balance * usdPrice : undefined
+    }
+  })
 
   return Response.json(balancesWithPrices)
 }

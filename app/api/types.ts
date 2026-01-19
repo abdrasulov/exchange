@@ -1,11 +1,15 @@
 export enum BlockchainType {
   Ethereum = 'Ethereum',
-  BSC = 'BSC'
+  BSC = 'BSC',
+  Solana = 'Solana',
+  Bitcoin = 'Bitcoin'
 }
 
-const chainIds: Record<BlockchainType, number> = {
+const chainIds: Record<BlockchainType, number | null> = {
   Ethereum: 1,
-  BSC: 56
+  BSC: 56,
+  Solana: null,
+  Bitcoin: null
 }
 
 export type TokenBalance = {
@@ -22,7 +26,7 @@ export class Token {
   blockchainType: BlockchainType
   tokenType: TokenType
   id: string
-  chainId: number
+  chainId: number | null
 
   constructor(code: string, name: string, decimals: number, blockchainType: BlockchainType, tokenType: TokenType) {
     this.code = code
@@ -54,6 +58,16 @@ export class TokenTypeEip20 implements TokenType {
   constructor(contractAddress: string) {
     this.id = 'Eip20-' + contractAddress
     this.contractAddress = contractAddress
+  }
+}
+
+export class TokenTypeSpl implements TokenType {
+  id: string
+  mint: string
+
+  constructor(mint: string) {
+    this.id = 'Spl-' + mint
+    this.mint = mint
   }
 }
 

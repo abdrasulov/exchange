@@ -7,7 +7,12 @@ export function CreateWalletButton() {
     try {
       const walletId = await createWallet({
         walletName: 'My New Wallet',
-        accounts: ['ADDRESS_FORMAT_ETHEREUM', 'ADDRESS_FORMAT_SOLANA'] // This will create one Ethereum and one Solana account within the wallet
+        accounts: [
+          'ADDRESS_FORMAT_ETHEREUM',
+          'ADDRESS_FORMAT_SOLANA',
+          'ADDRESS_FORMAT_BITCOIN_MAINNET_P2WPKH',
+          'ADDRESS_FORMAT_BITCOIN_MAINNET_P2WSH'
+        ]
       })
       console.log('Wallet created:', walletId)
     } catch (error) {

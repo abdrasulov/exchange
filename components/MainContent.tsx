@@ -31,8 +31,6 @@ export default function MainContent({ wallets }: MainContentProps) {
       try {
         for (const wallet of wallets) {
           for (const account of wallet.accounts) {
-            if (account.addressFormat !== 'ADDRESS_FORMAT_ETHEREUM') continue
-
             const balances = await fetchBalances(account.address, account.addressFormat)
 
             // Store balances for this account

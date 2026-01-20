@@ -26,7 +26,7 @@ export function Swap({
   const { wallets, signAndSendTransaction } = useTurnkey()
   const { tokens } = useTokens()
 
-  const [fromToken, setFromToken] = useState<string>(sellAsset || '')
+  const [fromToken, setFromToken] = useState<string>('')
   const [toToken, setToToken] = useState<string>('')
   const [amount, setAmount] = useState('')
   const [slippage, setSlippage] = useState('1')
@@ -39,8 +39,23 @@ export function Swap({
   const [isConfirmQuoteLoading, setIsConfirmQuoteLoading] = useState(false)
   const [confirmQuoteError, setConfirmQuoteError] = useState<string | null>(null)
 
-  const fromTokenMeta = useMemo(() => tokens.find(t => t.identifier === fromToken), [fromToken, tokens])
-  const toTokenMeta = useMemo(() => tokens.find(t => t.identifier === toToken), [toToken, tokens])
+  // Helper to find token case-insensitively
+  const findToken = useCallback(
+    (identifier: string) => tokens.find(t => t.identifier.toUpperCase() === identifier.toUpperCase()),
+    [tokens]
+  )
+
+  const fromTokenMeta = useMemo(() => findToken(fromToken), [fromToken, findToken])
+  const toTokenMeta = useMemo(() => findToken(toToken), [toToken, findToken])
+
+  // Set fromToken from sellAsset prop when tokens are loaded
+  useEffect(() => {
+    if (!sellAsset || tokens.length === 0) return
+    const matched = findToken(sellAsset)
+    if (matched) {
+      setFromToken(matched.identifier)
+    }
+  }, [sellAsset, tokens, findToken])
 
   const resolveAccountForChain = useCallback(
     (chain: string) => {
@@ -91,17 +106,20 @@ export function Swap({
     sourceAddress
   })
 
-  // Set default tokens when tokens load
+  // Set default tokens when tokens load (only if not already set)
   useEffect(() => {
     if (tokens.length === 0) return
-    if (!fromToken || !tokens.find(t => t.identifier === fromToken)) {
+
+    if (!fromToken && !sellAsset) {
       setFromToken(tokens[0].identifier)
     }
+
     if (!toToken) {
-      const differentToken = tokens.find(t => t.identifier !== (fromToken || tokens[0].identifier))
+      const currentFrom = fromToken || tokens[0].identifier
+      const differentToken = tokens.find(t => t.identifier !== currentFrom)
       setToToken(differentToken?.identifier || tokens[1]?.identifier || '')
     }
-  }, [tokens, fromToken, toToken])
+  }, [tokens, fromToken, toToken, sellAsset])
 
   // Fetch balance
   useEffect(() => {
@@ -113,8 +131,8 @@ export function Swap({
 
     fetchBalances(address, addressFormat)
       .then(data => {
-        const tokenBalance = data.find(b => b.token.code === fromTokenMeta.ticker)
-        setBalance(tokenBalance?.balance ? tokenBalance.balance.toFixed(6) : '0')
+        const tokenBalance = data.find(b => b.ticker === fromTokenMeta.ticker)
+        setBalance(tokenBalance?.value ?? '0')
       })
       .catch(() => setBalance(null))
   }, [fromTokenMeta, resolveAddressForChain])
@@ -350,6 +368,8 @@ export function Swap({
   }
 
   const displayError = previewQuoteError?.message || confirmQuoteError
+
+  console.log({ fromToken, sellAsset })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

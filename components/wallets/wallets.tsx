@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Loader } from 'lucide-react'
 import { Wallet } from '@turnkey/core'
 import { WalletsAccount } from '@/components/wallets/wallets-account'
 import { TransactionHistory } from '@/components/transaction-history'
 import { WalletsCreateButton } from '@/components/wallets/wallets-create-button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { TokenBalance } from '@/app/api/types'
+import { BalanceAsset } from '@/app/api/types'
 import { fetchBalances } from '@/lib/api'
 
 interface MainContentProps {
@@ -16,7 +17,7 @@ interface MainContentProps {
 export default function Wallets({ wallets }: MainContentProps) {
   const [totalBalance, setTotalBalance] = useState<number>(0)
   const [isLoadingBalance, setIsLoadingBalance] = useState<boolean>(true)
-  const [accountBalances, setAccountBalances] = useState<Record<string, TokenBalance[]>>({})
+  const [accountBalances, setAccountBalances] = useState<Record<string, BalanceAsset[]>>({})
 
   useEffect(() => {
     const fetchAllBalances = async () => {
@@ -26,7 +27,7 @@ export default function Wallets({ wallets }: MainContentProps) {
 
       setIsLoadingBalance(true)
       let total = 0
-      const balancesByAccount: Record<string, TokenBalance[]> = {}
+      const balancesByAccount: Record<string, BalanceAsset[]> = {}
 
       try {
         for (const wallet of wallets) {
@@ -38,8 +39,9 @@ export default function Wallets({ wallets }: MainContentProps) {
 
             // Calculate total
             for (const balance of balances) {
-              if (balance.usdValue) {
-                total += balance.usdValue
+              const usdValue = parseFloat(balance.value_usd)
+              if (usdValue > 0) {
+                total += usdValue
               }
             }
           }
@@ -65,18 +67,7 @@ export default function Wallets({ wallets }: MainContentProps) {
               <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Total Balance</p>
               <div className="mt-1 flex items-baseline gap-2">
                 {isLoadingBalance ? (
-                  <div className="flex h-10 items-center">
-                    <svg
-                      className="h-5 w-5 animate-spin text-neutral-400 dark:text-neutral-500"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      aria-label="Loading"
-                    >
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                    </svg>
-                  </div>
+                  <Loader className="animate-spin" size={20} />
                 ) : (
                   <span className="text-3xl font-bold text-neutral-900 dark:text-white">
                     ${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { BlockchainType, TransactionHistoryItem, TransactionHistoryResponse } from '@/app/api/types'
+import { Chain, TransactionHistoryItem, TransactionHistoryResponse } from '@/app/api/types'
 import {
   Alchemy,
   AssetTransfersCategory,
@@ -74,7 +74,7 @@ async function fetchEthereumTransactions(
     value: transfer.value,
     asset: transfer.asset,
     hash: transfer.hash,
-    chain: BlockchainType.Ethereum,
+    chain: Chain.ETH,
     rawContract: {
       address: transfer.rawContract?.address || null,
       decimal: transfer.rawContract?.decimal || null
@@ -153,7 +153,7 @@ async function fetchSolanaTransactions(address: string): Promise<TransactionHist
             value,
             asset,
             hash: sig.signature,
-            chain: BlockchainType.Solana,
+            chain: Chain.SOL,
             rawContract: {
               address: null,
               decimal: null
@@ -210,7 +210,7 @@ async function fetchBitcoinTransactions(address: string): Promise<TransactionHis
           value: btcValue,
           asset: 'BTC',
           hash: tx.hash,
-          chain: BlockchainType.Bitcoin,
+          chain: Chain.BTC,
           rawContract: {
             address: null,
             decimal: null

@@ -9,22 +9,29 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { TokenBalance, TokenTypeEip20, TokenTypeNative } from '@/app/api/types'
+import { BalanceAsset, Chain } from '@/app/api/types'
 
-export function TokenSend({
+const CHAIN_IDS: Record<Chain, number> = {
+  [Chain.ETH]: 1,
+  [Chain.BSC]: 56,
+  [Chain.SOL]: 0,
+  [Chain.BTC]: 0
+}
+
+export function AssetSend({
   open,
   onOpenChange,
   address,
-  tokenBalance,
+  asset,
   walletAccount
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   address: string
-  tokenBalance: TokenBalance | null
+  asset: BalanceAsset | null
   walletAccount: WalletAccount
 }) {
-  if (!tokenBalance) return null
+  if (!asset) return null
 
   type Step = 'form' | 'confirm' | 'success'
 
@@ -69,7 +76,8 @@ export function TokenSend({
     setStep('confirm')
   }
 
-  const token = tokenBalance.token
+  const isNativeToken = asset.address === null
+  const chainId = CHAIN_IDS[asset.chain]
 
   const onEnterRecipient = (value: string) => {
     setRecipient(value)
@@ -99,7 +107,7 @@ export function TokenSend({
     }
 
     // Decimal precision check
-    const decimals = tokenBalance.token.decimals
+    const decimals = asset.decimal
     const decimalPart = value.split('.')[1]
 
     if (decimalPart && decimalPart.length > decimals) {
@@ -109,7 +117,7 @@ export function TokenSend({
     // Balance check (BigInt safe)
     try {
       const valueWei = ethers.parseUnits(value, decimals)
-      const balanceWei = ethers.parseUnits(tokenBalance.balance.toString(), decimals)
+      const balanceWei = ethers.parseUnits(asset.value, decimals)
 
       if (valueWei > balanceWei) {
         return 'Insufficient balance'
@@ -128,13 +136,12 @@ export function TokenSend({
 
   const handleConfirmSend = async () => {
     try {
-      const isNativeToken = token.tokenType instanceof TokenTypeNative
-      if (!token.chainId) return
+      if (!chainId) return
 
       setLoading(true)
       setError(null)
 
-      const rpcUrl = getRpcUrl(token.chainId)
+      const rpcUrl = getRpcUrl(chainId)
 
       // Fetch the current nonce for the address
       const provider = new ethers.JsonRpcProvider(rpcUrl)
@@ -146,11 +153,11 @@ export function TokenSend({
       let unsignedTransaction: string
 
       if (isNativeToken) {
-        const amountWei = ethers.parseUnits(amount, token.decimals)
+        const amountWei = ethers.parseUnits(amount, asset.decimal)
         const tx = {
           to: recipient,
           value: amountWei,
-          chainId: token.chainId,
+          chainId: chainId,
           gasLimit: 21000,
           nonce: nonce,
           maxFeePerGas: feeData.maxFeePerGas,
@@ -159,18 +166,17 @@ export function TokenSend({
         }
         unsignedTransaction = ethers.Transaction.from(tx).unsignedSerialized
       } else {
-        const tokenTypeEip20 = token.tokenType as TokenTypeEip20
-        const contractAddress = tokenTypeEip20.contractAddress
+        const contractAddress = asset.address!
         const erc20Interface = new ethers.Interface(['function transfer(address to, uint256 amount) returns (bool)'])
 
-        const amountWei = ethers.parseUnits(amount, token.decimals)
+        const amountWei = ethers.parseUnits(amount, asset.decimal)
         const data = erc20Interface.encodeFunctionData('transfer', [recipient, amountWei])
 
         const tx = {
           to: contractAddress,
           data: data,
           value: 0,
-          chainId: token.chainId,
+          chainId: chainId,
           gasLimit: 100000,
           nonce: nonce,
           maxFeePerGas: feeData.maxFeePerGas,
@@ -207,7 +213,7 @@ export function TokenSend({
     <Dialog open={open} onOpenChange={loading ? () => {} : onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Send {tokenBalance.token.code}</DialogTitle>
+          <DialogTitle>Send {asset.ticker}</DialogTitle>
         </DialogHeader>
 
         {step === 'form' && (
@@ -215,7 +221,7 @@ export function TokenSend({
             {/* Network */}
             <div>
               <p className="text-muted-foreground text-xs">Network</p>
-              <p className="font-medium">{tokenBalance.token.blockchainType}</p>
+              <p className="font-medium">{asset.chain}</p>
             </div>
 
             {/* Recipient */}
@@ -236,7 +242,7 @@ export function TokenSend({
               <div className="flex items-center justify-between">
                 <Label htmlFor="amount">Amount</Label>
                 <span className="text-muted-foreground text-xs">
-                  Balance: {tokenBalance.balance} {tokenBalance.token.code}
+                  Balance: {asset.value} {asset.ticker}
                 </span>
               </div>
 
@@ -266,7 +272,7 @@ export function TokenSend({
               <div>
                 <p className="text-muted-foreground text-xs">Asset</p>
                 <p className="font-medium">
-                  {amount} {token.code}
+                  {amount} {asset.ticker}
                 </p>
               </div>
 
@@ -277,7 +283,7 @@ export function TokenSend({
 
               <div>
                 <p className="text-muted-foreground text-xs">Network</p>
-                <p className="font-medium">{token.blockchainType}</p>
+                <p className="font-medium">{asset.chain}</p>
               </div>
             </div>
 
@@ -307,7 +313,7 @@ export function TokenSend({
               <div className="text-center">
                 <h3 className="text-lg font-semibold">Transaction Confirmed</h3>
                 <p className="text-muted-foreground text-sm">
-                  {amount} {token.code} sent successfully
+                  {amount} {asset.ticker} sent successfully
                 </p>
               </div>
             </div>

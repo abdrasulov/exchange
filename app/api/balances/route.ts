@@ -1,13 +1,28 @@
 import { NextRequest } from 'next/server'
-import { BlockchainType, Token, TokenBalance, TokenTypeEip20, TokenTypeNative, TokenTypeSpl } from '@/app/api/types'
+import { BalanceAsset, Chain } from '@/app/api/types'
 import { Alchemy, Network } from 'alchemy-sdk'
+import coingeckoIds from '@/data/coingecko-ids.json'
 
-async function fetchErc20TokenPrices(contractAddresses: string[]): Promise<Record<string, number>> {
-  if (contractAddresses.length === 0) return {}
+type BalanceItem = {
+  chain: Chain
+  decimal: number
+  ticker: string
+  value: number
+  address: string | null
+}
+
+const COINGECKO_IDS: Record<string, string> = coingeckoIds
+
+async function fetchTokenPrices(tickers: string[]): Promise<Record<string, number>> {
+  if (tickers.length === 0) return {}
+
+  const coingeckoIds = tickers.map(ticker => COINGECKO_IDS[ticker.toUpperCase()]).filter(Boolean)
+
+  if (coingeckoIds.length === 0) return {}
 
   try {
     const response = await fetch(
-      `https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=${contractAddresses.join(',')}&vs_currencies=usd`,
+      `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoIds.join(',')}&vs_currencies=usd`,
       { next: { revalidate: 60 } }
     )
 
@@ -16,69 +31,22 @@ async function fetchErc20TokenPrices(contractAddresses: string[]): Promise<Recor
     const data = await response.json()
     const prices: Record<string, number> = {}
 
-    for (const address of contractAddresses) {
-      const lowerAddress = address.toLowerCase()
-      if (data[lowerAddress]?.usd) {
-        prices[lowerAddress] = data[lowerAddress].usd
+    for (const ticker of tickers) {
+      const coingeckoId = COINGECKO_IDS[ticker.toUpperCase()]
+      if (coingeckoId && data[coingeckoId]?.usd) {
+        prices[ticker.toUpperCase()] = data[coingeckoId].usd
       }
     }
 
     return prices
   } catch (error) {
-    console.error('Error fetching ERC-20 token prices:', error)
+    console.error('Error fetching token prices:', error)
     return {}
   }
 }
 
-async function fetchNativePrices(): Promise<Record<string, number>> {
-  try {
-    const response = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price?ids=ethereum,solana,bitcoin&vs_currencies=usd',
-      { next: { revalidate: 60 } }
-    )
-
-    if (!response.ok) return {}
-
-    const data = await response.json()
-    return {
-      ETH: data.ethereum?.usd,
-      SOL: data.solana?.usd,
-      BTC: data.bitcoin?.usd
-    }
-  } catch {
-    return {}
-  }
-}
-
-async function fetchSplTokenPrices(mints: string[]): Promise<Record<string, number>> {
-  if (mints.length === 0) return {}
-
-  try {
-    const response = await fetch(
-      `https://api.coingecko.com/api/v3/simple/token_price/solana?contract_addresses=${mints.join(',')}&vs_currencies=usd`,
-      { next: { revalidate: 60 } }
-    )
-
-    if (!response.ok) return {}
-
-    const data = await response.json()
-    const prices: Record<string, number> = {}
-
-    for (const mint of mints) {
-      if (data[mint]?.usd) {
-        prices[mint] = data[mint].usd
-      }
-    }
-
-    return prices
-  } catch (error) {
-    console.error('Error fetching SPL token prices:', error)
-    return {}
-  }
-}
-
-async function fetchEthereumBalances(address: string): Promise<TokenBalance[]> {
-  const balances: TokenBalance[] = []
+async function fetchEthereumBalances(address: string): Promise<BalanceItem[]> {
+  const balances: BalanceItem[] = []
 
   const alchemy = new Alchemy({
     apiKey: process.env.ALCHEMY_API_KEY,
@@ -92,11 +60,13 @@ async function fetchEthereumBalances(address: string): Promise<TokenBalance[]> {
     // Fetch native ETH balance
     const balanceWei = await alchemy.core.getBalance(address)
     const balanceEth = Number(balanceWei) / Math.pow(10, 18)
-    const ethToken = new Token('ETH', 'Ethereum', 18, BlockchainType.Ethereum, new TokenTypeNative())
 
     balances.push({
-      balance: balanceEth,
-      token: ethToken
+      chain: Chain.ETH,
+      decimal: 18,
+      ticker: 'ETH',
+      value: balanceEth,
+      address: null
     })
 
     // Fetch all ERC-20 token balances
@@ -108,17 +78,12 @@ async function fetchEthereumBalances(address: string): Promise<TokenBalance[]> {
       const balance = parseFloat(ownedToken.balance)
       if (balance === 0) continue
 
-      const token = new Token(
-        ownedToken.symbol || 'UNKNOWN',
-        ownedToken.name || 'Unknown Token',
-        ownedToken.decimals ?? 18,
-        BlockchainType.Ethereum,
-        new TokenTypeEip20(ownedToken.contractAddress)
-      )
-
       balances.push({
-        balance,
-        token
+        chain: Chain.ETH,
+        decimal: ownedToken.decimals ?? 18,
+        ticker: ownedToken.symbol || 'UNKNOWN',
+        value: balance,
+        address: ownedToken.contractAddress
       })
     }
   } catch (e) {
@@ -128,8 +93,8 @@ async function fetchEthereumBalances(address: string): Promise<TokenBalance[]> {
   return balances
 }
 
-async function fetchSolanaBalances(address: string): Promise<TokenBalance[]> {
-  const balances: TokenBalance[] = []
+async function fetchSolanaBalances(address: string): Promise<BalanceItem[]> {
+  const balances: BalanceItem[] = []
 
   try {
     // Fetch SOL balance using Alchemy Solana API
@@ -147,10 +112,12 @@ async function fetchSolanaBalances(address: string): Promise<TokenBalance[]> {
     const data = await response.json()
     if (data.result?.value !== undefined) {
       const balanceSol = data.result.value / Math.pow(10, 9)
-      const solToken = new Token('SOL', 'Solana', 9, BlockchainType.Solana, new TokenTypeNative())
       balances.push({
-        balance: balanceSol,
-        token: solToken
+        chain: Chain.SOL,
+        decimal: 9,
+        ticker: 'SOL',
+        value: balanceSol,
+        address: null
       })
     }
 
@@ -175,17 +142,12 @@ async function fetchSolanaBalances(address: string): Promise<TokenBalance[]> {
         const tokenAmount = info.tokenAmount
         if (!tokenAmount || tokenAmount.uiAmount === 0) continue
 
-        const token = new Token(
-          info.mint?.slice(0, 6) || 'UNKNOWN',
-          'SPL Token',
-          tokenAmount.decimals ?? 9,
-          BlockchainType.Solana,
-          new TokenTypeSpl(info.mint)
-        )
-
         balances.push({
-          balance: tokenAmount.uiAmount,
-          token
+          chain: Chain.SOL,
+          decimal: tokenAmount.decimals ?? 9,
+          ticker: info.mint?.slice(0, 6) || 'UNKNOWN',
+          value: tokenAmount.uiAmount,
+          address: info.mint
         })
       }
     }
@@ -196,8 +158,8 @@ async function fetchSolanaBalances(address: string): Promise<TokenBalance[]> {
   return balances
 }
 
-async function fetchBitcoinBalances(address: string): Promise<TokenBalance[]> {
-  const balances: TokenBalance[] = []
+async function fetchBitcoinBalances(address: string): Promise<BalanceItem[]> {
+  const balances: BalanceItem[] = []
 
   try {
     // Use blockchain.info API for Bitcoin balance
@@ -205,16 +167,26 @@ async function fetchBitcoinBalances(address: string): Promise<TokenBalance[]> {
     const satoshis = await response.text()
     const balanceBtc = parseInt(satoshis, 10) / Math.pow(10, 8)
 
-    const btcToken = new Token('BTC', 'Bitcoin', 8, BlockchainType.Bitcoin, new TokenTypeNative())
     balances.push({
-      balance: balanceBtc,
-      token: btcToken
+      chain: Chain.BTC,
+      decimal: 8,
+      ticker: 'BTC',
+      value: balanceBtc,
+      address: null
     })
   } catch (e) {
     console.error('Error fetching Bitcoin balances:', e)
   }
 
   return balances
+}
+
+function buildIdentifier(balance: BalanceItem): string {
+  if (balance.address) {
+    return `${balance.chain}.${balance.ticker}-${balance.address.toUpperCase()}`
+  }
+
+  return `${balance.chain}.${balance.ticker}`
 }
 
 export async function GET(request: NextRequest) {
@@ -226,7 +198,7 @@ export async function GET(request: NextRequest) {
     return Response.json([])
   }
 
-  let balances: TokenBalance[] = []
+  let balances: BalanceItem[] = []
 
   if (addressFormat === 'ADDRESS_FORMAT_ETHEREUM') {
     balances = await fetchEthereumBalances(address)
@@ -238,40 +210,25 @@ export async function GET(request: NextRequest) {
     return Response.json([])
   }
 
-  // Collect contract addresses for price fetching
-  const erc20Addresses = balances
-    .filter(b => b.token.tokenType instanceof TokenTypeEip20)
-    .map(b => (b.token.tokenType as TokenTypeEip20).contractAddress)
+  // Collect all tickers for price fetching
+  const tickers = balances.map(b => b.ticker)
+  const prices = await fetchTokenPrices(tickers)
 
-  const splMints = balances
-    .filter(b => b.token.tokenType instanceof TokenTypeSpl)
-    .map(b => (b.token.tokenType as TokenTypeSpl).mint)
-
-  // Fetch all prices in parallel
-  const [nativePrices, erc20Prices, splPrices] = await Promise.all([
-    fetchNativePrices(),
-    fetchErc20TokenPrices(erc20Addresses),
-    fetchSplTokenPrices(splMints)
-  ])
-
-  // Add USD price and value to each balance
-  const balancesWithPrices = balances.map(balance => {
-    let usdPrice: number | undefined
-
-    if (balance.token.tokenType instanceof TokenTypeNative) {
-      usdPrice = nativePrices[balance.token.code]
-    } else if (balance.token.tokenType instanceof TokenTypeEip20) {
-      usdPrice = erc20Prices[balance.token.tokenType.contractAddress.toLowerCase()]
-    } else if (balance.token.tokenType instanceof TokenTypeSpl) {
-      usdPrice = splPrices[balance.token.tokenType.mint]
-    }
+  // Build final response with USD prices
+  const result: BalanceAsset[] = balances.map(balance => {
+    const usdPrice = prices[balance.ticker.toUpperCase()]
+    const usdValue = usdPrice ? balance.value * usdPrice : undefined
 
     return {
-      ...balance,
-      usdPrice,
-      usdValue: usdPrice ? balance.balance * usdPrice : undefined
+      chain: balance.chain,
+      decimal: balance.decimal,
+      ticker: balance.ticker,
+      identifier: buildIdentifier(balance),
+      value: balance.value.toString(),
+      value_usd: usdValue?.toFixed(2) ?? '0.00',
+      address: balance.address
     }
   })
 
-  return Response.json(balancesWithPrices)
+  return Response.json(result)
 }

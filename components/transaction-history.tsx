@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { WalletAccount } from '@turnkey/core'
-import { BlockchainType, TransactionHistoryItem } from '@/app/api/types'
+import { Chain, TransactionHistoryItem } from '@/app/api/types'
 import { ArrowDownLeft, ArrowUpRight, ExternalLink, Filter } from 'lucide-react'
 import { fetchTransactions } from '@/lib/api'
 import {
@@ -82,11 +82,11 @@ export function TransactionHistory({ account }: TransactionHistoryProps) {
 
   const getExplorerUrl = (tx: TransactionHistoryItem) => {
     switch (tx.chain) {
-      case BlockchainType.Ethereum:
+      case Chain.ETH:
         return `https://etherscan.io/tx/${tx.hash}`
-      case BlockchainType.Solana:
+      case Chain.SOL:
         return `https://solscan.io/tx/${tx.hash}`
-      case BlockchainType.Bitcoin:
+      case Chain.BTC:
         return `https://blockchain.info/tx/${tx.hash}`
       default:
         return `https://etherscan.io/tx/${tx.hash}`

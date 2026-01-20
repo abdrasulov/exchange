@@ -1,4 +1,4 @@
-import { TokenBalance, TransactionHistoryResponse } from '@/app/api/types'
+import { BalanceAsset, TransactionHistoryResponse } from '@/app/api/types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://swap-api.unstoppable.money'
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY || ''
@@ -94,9 +94,9 @@ export async function fetchQuote(request: QuoteRequest, signal?: AbortSignal): P
   })
 }
 
-export async function fetchBalances(address: string, addressFormat: string): Promise<TokenBalance[]> {
-  const url = `/api/balances?${new URLSearchParams({ address, addressFormat })}`
-  return apiRequest<TokenBalance[]>(url)
+export async function fetchBalances(address: string, addressFormat: string): Promise<BalanceAsset[]> {
+  const params = new URLSearchParams({ address, addressFormat })
+  return apiRequest<BalanceAsset[]>(`/api/balances?${params}`)
 }
 
 export async function fetchTransactions(

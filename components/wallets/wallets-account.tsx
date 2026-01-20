@@ -1,75 +1,64 @@
 'use client'
 
-import { Token } from '@/components/token/token'
 import { useState } from 'react'
-import { TokenBalance } from '@/app/api/types'
+import { Asset } from '@/components/asset/asset'
+import { Loader } from 'lucide-react'
+import { BalanceAsset } from '@/app/api/types'
 import { WalletAccount } from '@turnkey/core'
-import { TokenReceive } from '@/components/token/token-receive'
-import { TokenSend } from '@/components/token/token-send'
+import { AssetReceive } from '@/components/asset/asset-receive'
+import { AssetSend } from '@/components/asset/asset-send'
 
 interface AssetDetailsProps {
   account: WalletAccount
-  balances: TokenBalance[]
+  balances: BalanceAsset[]
   loading: boolean
 }
 
 export function WalletsAccount({ account, balances, loading }: AssetDetailsProps) {
   const address = account.address
   const [sendOpen, setSendOpen] = useState(false)
-  const [sendToken, setSendToken] = useState<TokenBalance | null>(null)
+  const [sendToken, setSendToken] = useState<BalanceAsset | null>(null)
   const [receiveOpen, setReceiveOpen] = useState(false)
-  const [receiveToken, setReceiveToken] = useState<TokenBalance | null>(null)
+  const [receiveToken, setReceiveToken] = useState<BalanceAsset | null>(null)
 
   if (loading) {
     return (
       <div className="mb-4 flex h-24 items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-neutral-800">
-        <svg
-          className="h-6 w-6 animate-spin text-neutral-400 dark:text-neutral-500"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          aria-label="Loading"
-        >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-        </svg>
+        <Loader className="animate-spin" size={24} />
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      {balances.map((token, i) => (
-        <Token
+      {balances.map((asset, i) => (
+        <Asset
           key={i}
-          name={token.token.name}
-          code={token.token.code}
-          amount={token.balance.toFixed(token.token.decimals).replace(/\.?0+$/, '')}
-          fiatAmount={
-            token.usdValue
-              ? `$${token.usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-              : ''
-          }
+          name={asset.ticker}
+          code={asset.ticker}
+          amount={parseFloat(asset.value).toFixed(asset.decimal).replace(/\.?0+$/, '')}
+          fiatAmount={parseFloat(asset.value_usd) > 0 ? `$${asset.value_usd}` : ''}
           onReceive={() => {
             setReceiveOpen(true)
-            setReceiveToken(token)
+            setReceiveToken(asset)
           }}
           onSend={() => {
             setSendOpen(true)
-            setSendToken(token)
+            setSendToken(asset)
           }}
+          tokenIdentifier={asset.identifier}
         />
       ))}
 
-      <TokenSend
+      <AssetSend
         open={sendOpen}
         onOpenChange={setSendOpen}
         address={address}
-        tokenBalance={sendToken}
+        asset={sendToken}
         walletAccount={account}
       />
 
-      <TokenReceive open={receiveOpen} onOpenChange={setReceiveOpen} address={address} token={receiveToken} />
+      <AssetReceive open={receiveOpen} onOpenChange={setReceiveOpen} address={address} asset={receiveToken} />
     </div>
   )
 }

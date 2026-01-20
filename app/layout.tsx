@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Geist } from 'next/font/google'
 import { TurnkeyProvider, TurnkeyProviderConfig } from '@turnkey/react-wallet-kit'
 import { ReactQueryProvider } from '@/components/react-query/react-query-provider'
 

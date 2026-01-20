@@ -1,6 +1,6 @@
 import { useTurnkey } from '@turnkey/react-wallet-kit'
 
-export function CreateWalletButton() {
+export function WalletsCreateButton() {
   const { createWallet } = useTurnkey()
 
   const handleCreateWallet = async () => {

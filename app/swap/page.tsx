@@ -1,4 +1,4 @@
-import { SwapPageClient } from './SwapPageClient'
+import { SwapPageClient } from './swap-page-client'
 
 export default async function SwapPage({ params }: { params: Promise<{ sellAsset?: string }> }) {
   const { sellAsset } = await params

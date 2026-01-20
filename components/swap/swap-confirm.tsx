@@ -1,4 +1,4 @@
-import { Token, QuoteRoute } from '@/lib/api'
+import { QuoteRoute, Token } from '@/lib/api'
 
 type SwapConfirmProps = {
   amount: string
@@ -21,9 +21,7 @@ export function SwapConfirm({
   onBack,
   onConfirm
 }: SwapConfirmProps) {
-  const buttonText = needsApproval && fromTokenMeta?.address
-    ? `Approve ${fromTokenMeta.ticker}`
-    : 'Swap'
+  const buttonText = needsApproval && fromTokenMeta?.address ? `Approve ${fromTokenMeta.ticker}` : 'Swap'
 
   return (
     <div className="space-y-4">

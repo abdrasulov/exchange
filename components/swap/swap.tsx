@@ -4,17 +4,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ethers } from 'ethers'
 import { useTurnkey } from '@turnkey/react-wallet-kit'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { SwapApproval, SwapConfirm, SwapForm, SwapProgress, SwapSuccess } from '@/components/swap'
 import { fetchBalances, fetchQuote, QuoteRoute } from '@/lib/api'
 import { createApprovalTransaction } from '@/lib/erc20'
 import { chainAddressFormats, rpcUrls } from '@/lib/chains'
 import { useQuote } from '@/hooks/use-quote'
 import { useSimulation } from '@/hooks/use-simulation'
 import { useTokens } from '@/hooks/use-tokens'
-import { SwapApproval, SwapConfirm, SwapForm, SwapProgress, SwapSuccess } from '@/components/swap'
 
 type SwapStep = 'form' | 'confirm' | 'approve' | 'approving' | 'swapping' | 'success'
 
-export function SwapModal({
+export function Swap({
   open,
   onOpenChange,
   sellAsset

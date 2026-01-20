@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { TokenBalance, TokenTypeEip20, TokenTypeNative } from '@/app/api/types'
 
-export function SendDialog({
+export function TokenSend({
   open,
   onOpenChange,
   address,
@@ -128,10 +128,12 @@ export function SendDialog({
 
   const handleConfirmSend = async () => {
     try {
+      const isNativeToken = token.tokenType instanceof TokenTypeNative
+      if (!token.chainId) return
+
       setLoading(true)
       setError(null)
 
-      const isNativeToken = token.tokenType instanceof TokenTypeNative
       const rpcUrl = getRpcUrl(token.chainId)
 
       // Fetch the current nonce for the address

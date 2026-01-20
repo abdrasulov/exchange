@@ -1,11 +1,11 @@
 'use client'
 
-import AssetDetails from '@/components/AssetDetails'
-import TransactionHistory from '@/components/TransactionHistory'
+import { useEffect, useState } from 'react'
 import { Wallet } from '@turnkey/core'
-import { CreateWalletButton } from '@/components/CreateWalletButton'
+import { WalletsAccount } from '@/components/wallets/wallets-account'
+import { TransactionHistory } from '@/components/transaction-history'
+import { WalletsCreateButton } from '@/components/wallets/wallets-create-button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useEffect, useMemo, useState } from 'react'
 import { TokenBalance } from '@/app/api/types'
 import { fetchBalances } from '@/lib/api'
 
@@ -13,26 +13,10 @@ interface MainContentProps {
   wallets: Wallet[]
 }
 
-export default function MainContent({ wallets }: MainContentProps) {
+export default function Wallets({ wallets }: MainContentProps) {
   const [totalBalance, setTotalBalance] = useState<number>(0)
   const [isLoadingBalance, setIsLoadingBalance] = useState<boolean>(true)
   const [accountBalances, setAccountBalances] = useState<Record<string, TokenBalance[]>>({})
-
-  const uniqueWallets = useMemo(() => {
-    return wallets.map(wallet => {
-      const seen = new Set<string>()
-      const uniqueAccounts = wallet.accounts.filter(account => {
-        if (seen.has(account.walletAccountId)) {
-          return false
-        }
-
-        seen.add(account.walletAccountId)
-        return true
-      })
-
-      return { ...wallet, accounts: uniqueAccounts }
-    })
-  }, [wallets])
 
   useEffect(() => {
     const fetchAllBalances = async () => {
@@ -104,7 +88,7 @@ export default function MainContent({ wallets }: MainContentProps) {
         </div>
         <div className="flex-1 p-6">
           {wallets.length == 0 ? (
-            <CreateWalletButton />
+            <WalletsCreateButton />
           ) : (
             <Tabs defaultValue="assets" className="w-full">
               <TabsList className="mb-4 bg-neutral-100 dark:bg-neutral-800">
@@ -113,11 +97,11 @@ export default function MainContent({ wallets }: MainContentProps) {
               </TabsList>
               <TabsContent value="assets">
                 <div className="space-y-4">
-                  {uniqueWallets.map(wallet => (
+                  {wallets.map(wallet => (
                     <div className="space-y-4" key={wallet.walletId}>
                       <div className="mb-2">{wallet.walletName}</div>
                       {wallet.accounts.map(account => (
-                        <AssetDetails
+                        <WalletsAccount
                           account={account}
                           key={account.walletAccountId}
                           balances={accountBalances[account.walletAccountId] || []}
@@ -130,7 +114,7 @@ export default function MainContent({ wallets }: MainContentProps) {
               </TabsContent>
               <TabsContent value="history">
                 <div className="space-y-6">
-                  {uniqueWallets.map(wallet =>
+                  {wallets.map(wallet =>
                     wallet.accounts.map(account => (
                       <div key={account.walletAccountId}>
                         <h3 className="mb-3 text-sm font-medium text-neutral-500 dark:text-neutral-400">

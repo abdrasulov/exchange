@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { BlockchainType, TransactionHistoryItem } from '@/app/api/types'
 import { WalletAccount } from '@turnkey/core'
+import { BlockchainType, TransactionHistoryItem } from '@/app/api/types'
 import { ArrowDownLeft, ArrowUpRight, ExternalLink, Filter } from 'lucide-react'
+import { fetchTransactions } from '@/lib/api'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +14,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { fetchTransactions } from '@/lib/api'
 
 interface TransactionHistoryProps {
   account: WalletAccount
@@ -21,7 +21,7 @@ interface TransactionHistoryProps {
 
 type DirectionFilter = 'all' | 'incoming' | 'outgoing'
 
-export default function TransactionHistory({ account }: TransactionHistoryProps) {
+export function TransactionHistory({ account }: TransactionHistoryProps) {
   const [loading, setLoading] = useState<boolean>(false)
   const [transactions, setTransactions] = useState<TransactionHistoryItem[]>([])
   const [pageKey, setPageKey] = useState<string | undefined>(undefined)

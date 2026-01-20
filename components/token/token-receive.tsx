@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { TokenBalance } from '@/app/api/types'
 
-export function ReceiveDialog({
+export function TokenReceive({
   open,
   onOpenChange,
   address,

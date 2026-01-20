@@ -1,6 +1,6 @@
 import { useTurnkey } from '@turnkey/react-wallet-kit'
 
-export function GuestPage() {
+export function MainGuest() {
   const { handleLogin } = useTurnkey()
 
   return (

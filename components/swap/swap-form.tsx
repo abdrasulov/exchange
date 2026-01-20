@@ -1,4 +1,4 @@
-import { Token, QuoteRoute } from '@/lib/api'
+import { QuoteRoute, Token } from '@/lib/api'
 
 type SwapFormProps = {
   tokens: Token[]

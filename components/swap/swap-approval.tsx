@@ -15,14 +15,7 @@ type SwapApprovalProps = {
   onApprove: () => void
 }
 
-export function SwapApproval({
-  amount,
-  fromTokenMeta,
-  approveData,
-  status,
-  onBack,
-  onApprove
-}: SwapApprovalProps) {
+export function SwapApproval({ amount, fromTokenMeta, approveData, status, onBack, onApprove }: SwapApprovalProps) {
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">

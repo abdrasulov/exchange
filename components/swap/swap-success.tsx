@@ -1,4 +1,4 @@
-import { Token, QuoteRoute } from '@/lib/api'
+import { QuoteRoute, Token } from '@/lib/api'
 import { getExplorerTxUrl } from '@/lib/chains'
 
 type SwapSuccessProps = {
@@ -9,16 +9,8 @@ type SwapSuccessProps = {
   swapTxHash: string | null
 }
 
-export function SwapSuccess({
-  amount,
-  fromTokenMeta,
-  toTokenMeta,
-  confirmQuote,
-  swapTxHash
-}: SwapSuccessProps) {
-  const explorerUrl = swapTxHash && fromTokenMeta
-    ? getExplorerTxUrl(fromTokenMeta.chain, swapTxHash)
-    : null
+export function SwapSuccess({ amount, fromTokenMeta, toTokenMeta, confirmQuote, swapTxHash }: SwapSuccessProps) {
+  const explorerUrl = swapTxHash && fromTokenMeta ? getExplorerTxUrl(fromTokenMeta.chain, swapTxHash) : null
 
   return (
     <div className="space-y-4">

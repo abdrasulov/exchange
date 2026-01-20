@@ -1,11 +1,11 @@
 'use client'
 
-import AssetCard from '@/components/AssetCard'
+import { Token } from '@/components/token/token'
 import { useState } from 'react'
 import { TokenBalance } from '@/app/api/types'
 import { WalletAccount } from '@turnkey/core'
-import { ReceiveDialog } from '@/components/ReceiveDialog'
-import { SendDialog } from '@/components/SendDialog'
+import { TokenReceive } from '@/components/token/token-receive'
+import { TokenSend } from '@/components/token/token-send'
 
 interface AssetDetailsProps {
   account: WalletAccount
@@ -13,7 +13,7 @@ interface AssetDetailsProps {
   loading: boolean
 }
 
-export default function AssetDetails({ account, balances, loading }: AssetDetailsProps) {
+export function WalletsAccount({ account, balances, loading }: AssetDetailsProps) {
   const address = account.address
   const [sendOpen, setSendOpen] = useState(false)
   const [sendToken, setSendToken] = useState<TokenBalance | null>(null)
@@ -40,7 +40,7 @@ export default function AssetDetails({ account, balances, loading }: AssetDetail
   return (
     <div className="space-y-4">
       {balances.map((token, i) => (
-        <AssetCard
+        <Token
           key={i}
           name={token.token.name}
           code={token.token.code}
@@ -61,7 +61,7 @@ export default function AssetDetails({ account, balances, loading }: AssetDetail
         />
       ))}
 
-      <SendDialog
+      <TokenSend
         open={sendOpen}
         onOpenChange={setSendOpen}
         address={address}
@@ -69,7 +69,7 @@ export default function AssetDetails({ account, balances, loading }: AssetDetail
         walletAccount={account}
       />
 
-      <ReceiveDialog open={receiveOpen} onOpenChange={setReceiveOpen} address={address} token={receiveToken} />
+      <TokenReceive open={receiveOpen} onOpenChange={setReceiveOpen} address={address} token={receiveToken} />
     </div>
   )
 }

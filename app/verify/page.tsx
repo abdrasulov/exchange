@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { createAccessToken, createSignature } from '@/lib/sumsub'
-import SumsubWidget from '@/app/verify/sumsubWidget'
+import SumsubWidget from '@/app/verify/sumsub-widget'
 
 axios.interceptors.request.use(createSignature, function (error) {
   return Promise.reject(error)

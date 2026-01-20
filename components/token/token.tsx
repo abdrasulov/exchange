@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-interface AssetCardProps {
+interface TokenProps {
   name: string
   code: string
   amount: string
@@ -10,7 +10,7 @@ interface AssetCardProps {
   tokenIdentifier?: string
 }
 
-const AssetCard = ({ name, code, amount, fiatAmount, onReceive, onSend, tokenIdentifier }: AssetCardProps) => {
+export function Token({ name, code, amount, fiatAmount, onReceive, onSend, tokenIdentifier }: TokenProps) {
   return (
     <details className="group rounded-xl border border-neutral-200 bg-neutral-50 transition-all duration-300 open:ring-1 open:ring-neutral-200 dark:border-neutral-800 dark:bg-neutral-950/50 dark:open:ring-neutral-800">
       <summary className="flex cursor-pointer list-none items-center justify-between p-4 focus:outline-none">
@@ -89,5 +89,3 @@ const AssetCard = ({ name, code, amount, fiatAmount, onReceive, onSend, tokenIde
     </details>
   )
 }
-
-export default AssetCard

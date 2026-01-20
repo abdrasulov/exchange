@@ -16,31 +16,51 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 interface TransactionHistoryProps {
-  account: WalletAccount
+  accounts: WalletAccount[]
 }
 
 type DirectionFilter = 'all' | 'incoming' | 'outgoing'
 
-export function TransactionHistory({ account }: TransactionHistoryProps) {
+const getChainFromAddressFormat = (addressFormat: string): Chain | null => {
+  if (addressFormat === 'ADDRESS_FORMAT_ETHEREUM') {
+    return Chain.ETH
+  } else if (addressFormat === 'ADDRESS_FORMAT_SOLANA') {
+    return Chain.SOL
+  } else if (addressFormat.startsWith('ADDRESS_FORMAT_BITCOIN')) {
+    return Chain.BTC
+  }
+  return null
+}
+
+export function TransactionHistory({ accounts }: TransactionHistoryProps) {
   const [loading, setLoading] = useState<boolean>(false)
   const [transactions, setTransactions] = useState<TransactionHistoryItem[]>([])
   const [pageKey, setPageKey] = useState<string | undefined>(undefined)
   const [hasMore, setHasMore] = useState<boolean>(false)
   const [directionFilter, setDirectionFilter] = useState<DirectionFilter>('all')
   const [assetFilter, setAssetFilter] = useState<string>('all')
+  const [selectedAccount, setSelectedAccount] = useState<WalletAccount | undefined>(accounts[0])
 
-  const address = account.address
-  const addressFormat = account.addressFormat
+  const address = selectedAccount?.address
+  const addressFormat = selectedAccount?.addressFormat
+  const chain = addressFormat ? getChainFromAddressFormat(addressFormat) : null
 
   useEffect(() => {
-    fetchTransactionsData().catch(console.error)
-  }, [address, addressFormat])
+    if (selectedAccount && chain) {
+      setTransactions([])
+      setPageKey(undefined)
+      setHasMore(false)
+      fetchTransactionsData().catch(console.error)
+    }
+  }, [selectedAccount])
 
   const fetchTransactionsData = async (nextPageKey?: string) => {
+    if (!address || !addressFormat || !chain) return
+
     setLoading(true)
 
     try {
-      const data = await fetchTransactions(address, addressFormat, nextPageKey)
+      const data = await fetchTransactions(address, addressFormat, chain, nextPageKey)
 
       if (nextPageKey) {
         setTransactions(prev => [...prev, ...data.transfers])
@@ -94,7 +114,7 @@ export function TransactionHistory({ account }: TransactionHistoryProps) {
   }
 
   const isIncoming = (tx: TransactionHistoryItem) => {
-    return tx.to?.toLowerCase() === address.toLowerCase()
+    return address && tx.to?.toLowerCase() === address.toLowerCase()
   }
 
   const availableAssets = useMemo(() => {
@@ -121,27 +141,75 @@ export function TransactionHistory({ account }: TransactionHistoryProps) {
     })
   }, [transactions, directionFilter, assetFilter])
 
+  const accountSelector = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700">
+          <Filter className="h-4 w-4" />
+          {chain ? chain : 'Select Chain'}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuLabel>Select Chain</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuRadioGroup
+          value={selectedAccount?.address || ''}
+          onValueChange={value => {
+            const account = accounts.find(a => a.address === value)
+            setSelectedAccount(account)
+          }}
+        >
+          {accounts.map(account => {
+            const accountChain = getChainFromAddressFormat(account.addressFormat)
+            return (
+              <DropdownMenuRadioItem key={account.address} value={account.address}>
+                {accountChain || 'Unknown'}
+              </DropdownMenuRadioItem>
+            )
+          })}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+
+  if (!selectedAccount) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">{accountSelector}</div>
+        <div className="flex h-48 items-center justify-center">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">Select a chain to view transactions</p>
+        </div>
+      </div>
+    )
+  }
+
   if (loading && transactions.length === 0) {
     return (
-      <div className="flex h-48 items-center justify-center">
-        <svg
-          className="h-6 w-6 animate-spin text-neutral-400 dark:text-neutral-500"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          aria-label="Loading"
-        >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-        </svg>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">{accountSelector}</div>
+        <div className="flex h-48 items-center justify-center">
+          <svg
+            className="h-6 w-6 animate-spin text-neutral-400 dark:text-neutral-500"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            aria-label="Loading"
+          >
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+          </svg>
+        </div>
       </div>
     )
   }
 
   if (transactions.length === 0) {
     return (
-      <div className="flex h-48 items-center justify-center">
-        <p className="text-sm text-neutral-500 dark:text-neutral-400">No transactions found</p>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">{accountSelector}</div>
+        <div className="flex h-48 items-center justify-center">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">No transactions found</p>
+        </div>
       </div>
     )
   }
@@ -150,6 +218,9 @@ export function TransactionHistory({ account }: TransactionHistoryProps) {
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
+        {/* Chain Filter */}
+        {accountSelector}
+
         {/* Direction Filter */}
         <div className="flex gap-2">
           <button

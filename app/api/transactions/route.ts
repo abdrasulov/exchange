@@ -229,10 +229,11 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const address = searchParams.get('address')
   const addressFormat = searchParams.get('addressFormat')
+  const chain = searchParams.get('chain')
   const pageKey = searchParams.get('pageKey') || undefined
   const maxCountParam = searchParams.get('maxCount')
 
-  if (address == null || addressFormat == null) {
+  if (address == null || addressFormat == null || chain == null) {
     return Response.json({ transfers: [], pageKey: undefined })
   }
 
@@ -241,11 +242,11 @@ export async function GET(request: NextRequest) {
   try {
     let response: TransactionHistoryResponse
 
-    if (addressFormat === 'ADDRESS_FORMAT_ETHEREUM') {
+    if (chain === Chain.ETH) {
       response = await fetchEthereumTransactions(address, pageKey, maxCount)
-    } else if (addressFormat === 'ADDRESS_FORMAT_SOLANA') {
+    } else if (chain === Chain.SOL) {
       response = await fetchSolanaTransactions(address)
-    } else if (addressFormat.startsWith('ADDRESS_FORMAT_BITCOIN')) {
+    } else if (chain === Chain.BTC) {
       response = await fetchBitcoinTransactions(address)
     } else {
       return Response.json({ transfers: [], pageKey: undefined })

@@ -104,19 +104,7 @@ export default function Wallets({ wallets }: MainContentProps) {
                 </div>
               </TabsContent>
               <TabsContent value="history">
-                <div className="space-y-6">
-                  {wallets.map(wallet =>
-                    wallet.accounts.map(account => (
-                      <div key={account.walletAccountId}>
-                        <h3 className="mb-3 text-sm font-medium text-neutral-500 dark:text-neutral-400">
-                          {account.addressFormat.replace('ADDRESS_FORMAT_', '')} - {account.address.slice(0, 6)}...
-                          {account.address.slice(-4)}
-                        </h3>
-                        <TransactionHistory account={account} />
-                      </div>
-                    ))
-                  )}
-                </div>
+                <TransactionHistory accounts={wallets.flatMap(wallet => wallet.accounts)} />
               </TabsContent>
             </Tabs>
           )}

@@ -102,14 +102,15 @@ export async function fetchBalances(address: string, addressFormat: string): Pro
 export async function fetchTransactions(
   address: string,
   addressFormat: string,
+  chain: string,
   pageKey?: string
 ): Promise<TransactionHistoryResponse> {
-  let url = `/api/transactions?address=${address}&addressFormat=${addressFormat}`
+  const params = new URLSearchParams({ address, addressFormat, chain })
   if (pageKey) {
-    url += `&pageKey=${pageKey}`
+    params.set('pageKey', pageKey)
   }
 
-  return apiRequest<TransactionHistoryResponse>(url)
+  return apiRequest<TransactionHistoryResponse>(`/api/transactions?${params}`)
 }
 
 export type VerificationResponse = {

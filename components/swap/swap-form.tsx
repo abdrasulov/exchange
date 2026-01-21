@@ -1,9 +1,10 @@
 import { QuoteRoute, Token } from '@/lib/api'
+import { SwapSelectAsset } from '@/components/swap/swap-select-asset'
+import { AssetIcon } from '@/components/asset-icon'
+import { ChevronDown } from 'lucide-react'
+import { useDialog } from '@/components/global-dialog'
 
 type SwapFormProps = {
-  tokens: Token[]
-  fromToken: string
-  toToken: string
   amount: string
   slippage: string
   balance: string | null
@@ -13,17 +14,14 @@ type SwapFormProps = {
   isLoading: boolean
   needsApproval: boolean
   error?: string | null
-  onFromTokenChange: (value: string) => void
-  onToTokenChange: (value: string) => void
+  onFromTokenChange: (token: Token) => void
+  onToTokenChange: (token: Token) => void
   onAmountChange: (value: string) => void
   onSlippageChange: (value: string) => void
   onSubmit: () => void
 }
 
 export function SwapForm({
-  tokens,
-  fromToken,
-  toToken,
   amount,
   slippage,
   balance,
@@ -39,6 +37,7 @@ export function SwapForm({
   onSlippageChange,
   onSubmit
 }: SwapFormProps) {
+  const { openDialog } = useDialog()
   const getButtonText = () => {
     if (!fromTokenMeta || !toTokenMeta) return ''
     if (!amount || Number(amount) <= 0) return 'Enter Amount'
@@ -50,36 +49,60 @@ export function SwapForm({
 
   const isDisabled = !amount || Number(amount) <= 0 || isLoading || !!error || !previewQuote
 
+  const openFromTokenSelector = () => {
+    openDialog(SwapSelectAsset, {
+      selected: fromTokenMeta,
+      onSelectAsset: onFromTokenChange
+    })
+  }
+
+  const openToTokenSelector = () => {
+    openDialog(SwapSelectAsset, {
+      selected: toTokenMeta,
+      onSelectAsset: onToTokenChange
+    })
+  }
+
   return (
     <div className="space-y-4 overflow-hidden">
       <div className="space-y-2">
         <label className="text-sm font-medium">From</label>
-        <select
-          value={fromToken}
-          onChange={e => onFromTokenChange(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+        <button
+          type="button"
+          onClick={openFromTokenSelector}
+          className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm hover:bg-slate-50"
         >
-          {tokens.map(token => (
-            <option key={token.identifier} value={token.identifier}>
-              {token.ticker} - {token.name} ({token.chain})
-            </option>
-          ))}
-        </select>
+          {fromTokenMeta ? (
+            <div className="flex items-center gap-2">
+              <AssetIcon token={fromTokenMeta} className="h-6 w-6" />
+              <span className="font-medium">{fromTokenMeta.ticker}</span>
+              <span className="text-slate-500">{fromTokenMeta.chain}</span>
+            </div>
+          ) : (
+            <span className="text-slate-400">Select token</span>
+          )}
+          <ChevronDown className="h-4 w-4 text-slate-400" />
+        </button>
       </div>
 
       <div className="space-y-2">
         <label className="text-sm font-medium">To</label>
-        <select
-          value={toToken}
-          onChange={e => onToTokenChange(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+        <button
+          type="button"
+          onClick={openToTokenSelector}
+          className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm hover:bg-slate-50"
         >
-          {tokens.map(token => (
-            <option key={token.identifier} value={token.identifier}>
-              {token.ticker} - {token.name} ({token.chain})
-            </option>
-          ))}
-        </select>
+          {toTokenMeta ? (
+            <div className="flex items-center gap-2">
+              <AssetIcon token={toTokenMeta} className="h-6 w-6" />
+              <span className="font-medium">{toTokenMeta.ticker}</span>
+              <span className="text-slate-500">{toTokenMeta.chain}</span>
+            </div>
+          ) : (
+            <span className="text-slate-400">Select token</span>
+          )}
+          <ChevronDown className="h-4 w-4 text-slate-400" />
+        </button>
       </div>
 
       <div className="space-y-2">

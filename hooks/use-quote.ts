@@ -49,7 +49,7 @@ export const useQuote = (params: QuoteParams): UseQuoteResult => {
     buyAsset &&
     sellAmount &&
     Number(sellAmount) > 0 &&
-    destinationAddress
+    (dry || destinationAddress)
   )
 
   const {
@@ -61,7 +61,10 @@ export const useQuote = (params: QuoteParams): UseQuoteResult => {
   } = useQuery({
     queryKey,
     queryFn: async ({ signal }) => {
-      if (!sellAsset || !buyAsset || !sellAmount || !destinationAddress) {
+      if (!sellAsset || !buyAsset || !sellAmount) {
+        return null
+      }
+      if (!dry && !destinationAddress) {
         return null
       }
 

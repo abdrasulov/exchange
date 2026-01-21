@@ -1,3 +1,5 @@
+'use client'
+
 import { useTurnkey } from '@turnkey/react-wallet-kit'
 
 export function MainGuest() {

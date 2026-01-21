@@ -1,29 +1,29 @@
 'use client'
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Credenza, CredenzaContent, CredenzaHeader, CredenzaTitle } from '@/components/ui/credenza'
 import { BalanceAsset } from '@/app/api/types'
 
 export function AssetReceive({
-  open,
+  isOpen,
   onOpenChange,
   address,
   asset
 }: {
-  open: boolean
+  isOpen: boolean
   onOpenChange: (open: boolean) => void
   address: string
   asset: BalanceAsset | null
 }) {
   if (!asset) {
-    return
+    return null
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Receive {asset.ticker}</DialogTitle>
-        </DialogHeader>
+    <Credenza open={isOpen} onOpenChange={onOpenChange}>
+      <CredenzaContent className="sm:max-w-md">
+        <CredenzaHeader>
+          <CredenzaTitle>Receive {asset.ticker}</CredenzaTitle>
+        </CredenzaHeader>
 
         <div className="space-y-3">
           <div>
@@ -38,7 +38,7 @@ export function AssetReceive({
 
           {/* later: QR code, copy button, network badge */}
         </div>
-      </DialogContent>
-    </Dialog>
+      </CredenzaContent>
+    </Credenza>
   )
 }

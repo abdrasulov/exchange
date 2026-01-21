@@ -5,7 +5,7 @@ import { ethers } from 'ethers'
 import { WalletAccount } from '@turnkey/core'
 import { useTurnkey } from '@turnkey/react-wallet-kit'
 import { CheckCircle2, ExternalLink, Loader2 } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Credenza, CredenzaContent, CredenzaHeader, CredenzaTitle } from '@/components/ui/credenza'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,13 +19,13 @@ const CHAIN_IDS: Record<Chain, number> = {
 }
 
 export function AssetSend({
-  open,
+  isOpen,
   onOpenChange,
   address,
   asset,
   walletAccount
 }: {
-  open: boolean
+  isOpen: boolean
   onOpenChange: (open: boolean) => void
   address: string
   asset: BalanceAsset | null
@@ -47,7 +47,7 @@ export function AssetSend({
   const { signAndSendTransaction } = useTurnkey()
 
   useEffect(() => {
-    if (!open) {
+    if (!isOpen) {
       setStep('form')
       setRecipient('')
       setAmount('')
@@ -56,7 +56,7 @@ export function AssetSend({
       setError(null)
       setTxHash('')
     }
-  }, [open])
+  }, [isOpen])
 
   const getRpcUrl = (chainId: number): string => {
     switch (chainId) {
@@ -210,11 +210,11 @@ export function AssetSend({
   }
 
   return (
-    <Dialog open={open} onOpenChange={loading ? () => {} : onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Send {asset.ticker}</DialogTitle>
-        </DialogHeader>
+    <Credenza open={isOpen} onOpenChange={loading ? () => {} : onOpenChange}>
+      <CredenzaContent className="sm:max-w-md">
+        <CredenzaHeader>
+          <CredenzaTitle>Send {asset.ticker}</CredenzaTitle>
+        </CredenzaHeader>
 
         {step === 'form' && (
           <div className="space-y-5">
@@ -338,7 +338,7 @@ export function AssetSend({
             </Button>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </CredenzaContent>
+    </Credenza>
   )
 }

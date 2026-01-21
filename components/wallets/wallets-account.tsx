@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
 import { Asset } from '@/components/asset/asset'
 import { Loader } from 'lucide-react'
 import { BalanceAsset } from '@/app/api/types'
 import { WalletAccount } from '@turnkey/core'
 import { AssetReceive } from '@/components/asset/asset-receive'
 import { AssetSend } from '@/components/asset/asset-send'
+import { useDialog } from '@/components/global-dialog'
 
 interface AssetDetailsProps {
   account: WalletAccount
@@ -16,10 +16,7 @@ interface AssetDetailsProps {
 
 export function WalletsAccount({ account, balances, loading }: AssetDetailsProps) {
   const address = account.address
-  const [sendOpen, setSendOpen] = useState(false)
-  const [sendToken, setSendToken] = useState<BalanceAsset | null>(null)
-  const [receiveOpen, setReceiveOpen] = useState(false)
-  const [receiveToken, setReceiveToken] = useState<BalanceAsset | null>(null)
+  const { openDialog } = useDialog()
 
   if (loading) {
     return (
@@ -27,6 +24,21 @@ export function WalletsAccount({ account, balances, loading }: AssetDetailsProps
         <Loader className="animate-spin" size={24} />
       </div>
     )
+  }
+
+  const handleSend = (asset: BalanceAsset) => {
+    openDialog(AssetSend, {
+      address,
+      asset,
+      walletAccount: account
+    })
+  }
+
+  const handleReceive = (asset: BalanceAsset) => {
+    openDialog(AssetReceive, {
+      address,
+      asset
+    })
   }
 
   return (
@@ -38,27 +50,11 @@ export function WalletsAccount({ account, balances, loading }: AssetDetailsProps
           code={asset.ticker}
           amount={parseFloat(asset.value).toFixed(asset.decimal).replace(/\.?0+$/, '')}
           fiatAmount={parseFloat(asset.value_usd) > 0 ? `$${asset.value_usd}` : ''}
-          onReceive={() => {
-            setReceiveOpen(true)
-            setReceiveToken(asset)
-          }}
-          onSend={() => {
-            setSendOpen(true)
-            setSendToken(asset)
-          }}
+          onReceive={() => handleReceive(asset)}
+          onSend={() => handleSend(asset)}
           tokenIdentifier={asset.identifier}
         />
       ))}
-
-      <AssetSend
-        open={sendOpen}
-        onOpenChange={setSendOpen}
-        address={address}
-        asset={sendToken}
-        walletAccount={account}
-      />
-
-      <AssetReceive open={receiveOpen} onOpenChange={setReceiveOpen} address={address} asset={receiveToken} />
     </div>
   )
 }

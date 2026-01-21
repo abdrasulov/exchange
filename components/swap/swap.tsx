@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ethers } from 'ethers'
 import { useTurnkey } from '@turnkey/react-wallet-kit'
+// import { Credenza, CredenzaContent, CredenzaHeader, CredenzaTitle } from '@/components/ui/credenza'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { SwapApproval, SwapConfirm, SwapForm, SwapProgress, SwapSuccess } from '@/components/swap'
 import { fetchBalances, fetchQuote, QuoteRoute } from '@/lib/api'
@@ -13,16 +14,13 @@ import { useSimulation } from '@/hooks/use-simulation'
 import { useTokens } from '@/hooks/use-tokens'
 
 type SwapStep = 'form' | 'confirm' | 'approve' | 'approving' | 'swapping' | 'success'
-
-export function Swap({
-  open,
-  onOpenChange,
-  sellAsset
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+type SwapProps = {
+  isOpen: boolean
+  onOpenChange: (isOpen: boolean) => void
   sellAsset?: string
-}) {
+}
+
+export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
   const { wallets, signAndSendTransaction } = useTurnkey()
   const { tokens } = useTokens()
 
@@ -139,7 +137,7 @@ export function Swap({
 
   // Reset state when dialog closes
   useEffect(() => {
-    if (!open) {
+    if (!isOpen) {
       setSwapStep('form')
       setConfirmQuote(null)
       setConfirmQuoteError(null)
@@ -147,7 +145,7 @@ export function Swap({
       setSwapTxHash(null)
       setStatus(null)
     }
-  }, [open])
+  }, [isOpen])
 
   const fetchConfirmQuote = async () => {
     if (!fromTokenMeta || !toTokenMeta || !destinationAddress) return
@@ -369,20 +367,15 @@ export function Swap({
 
   const displayError = previewQuoteError?.message || confirmQuoteError
 
-  console.log({ fromToken, sellAsset })
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md p-4">
         <DialogHeader>
           <DialogTitle>Swap Tokens</DialogTitle>
         </DialogHeader>
 
         {swapStep === 'form' && (
           <SwapForm
-            tokens={tokens}
-            fromToken={fromToken}
-            toToken={toToken}
             amount={amount}
             slippage={slippage}
             balance={balance}
@@ -392,8 +385,8 @@ export function Swap({
             isLoading={isPreviewQuoteLoading || isConfirmQuoteLoading || isSimulating}
             needsApproval={needsApproval}
             error={displayError}
-            onFromTokenChange={setFromToken}
-            onToTokenChange={setToToken}
+            onFromTokenChange={token => setFromToken(token.identifier)}
+            onToTokenChange={token => setToToken(token.identifier)}
             onAmountChange={setAmount}
             onSlippageChange={setSlippage}
             onSubmit={handleFormSubmit}

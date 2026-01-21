@@ -1,15 +1,15 @@
 import type { ReactNode } from 'react'
 import type { Metadata } from 'next'
-import { Geist } from 'next/font/google'
+import { Manrope } from 'next/font/google'
 import { TurnkeyProvider, TurnkeyProviderConfig } from '@turnkey/react-wallet-kit'
 import { ReactQueryProvider } from '@/components/react-query/react-query-provider'
 
 import './globals.css'
 import '@turnkey/react-wallet-kit/styles.css'
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin']
+const manrope = Manrope({
+  subsets: ['latin'],
+  display: 'swap'
 })
 
 export const metadata: Metadata = {
@@ -24,8 +24,8 @@ const turnkeyConfig: TurnkeyProviderConfig = {
 
 export default function RootLayout({ children, modal }: Readonly<{ children: ReactNode; modal: ReactNode }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} antialiased`}>
+    <html lang="en" data-brand="unstoppable" suppressHydrationWarning>
+      <body className={`${manrope.className} bg-tyler antialiased`}>
         <ReactQueryProvider>
           <TurnkeyProvider config={turnkeyConfig}>
             {children}

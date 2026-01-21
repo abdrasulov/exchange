@@ -32,9 +32,13 @@ export type Token = {
   address: string | null
   chain: string
   chainId: string
+  coingeckoId?: string
   decimals: number
-  ticker: string
+  logoURI?: string
   name: string
+  shortCode?: string | null
+  ticker: string
+  extensions?: Record<string, unknown>
 }
 
 export type TokensResponse = {
@@ -76,7 +80,7 @@ export type QuoteRequest = {
   sellAsset: string
   buyAsset: string
   sellAmount: string
-  destinationAddress: string
+  destinationAddress?: string
   sourceAddress?: string
   slippage: number
   providers: string[]

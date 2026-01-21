@@ -6,5 +6,5 @@ import { useRouter } from 'next/navigation'
 export function SwapModalClient({ sellAsset }: { sellAsset?: string }) {
   const router = useRouter()
 
-  return <Swap open={true} onOpenChange={isOpen => !isOpen && router.back()} sellAsset={sellAsset} />
+  return <Swap isOpen={true} onOpenChange={open => !open && router.back()} sellAsset={sellAsset} />
 }

@@ -1,10 +1,17 @@
+'use client'
+
 import { useMemo } from 'react'
-import { useTurnkey } from '@turnkey/react-wallet-kit'
+import { AuthState, useTurnkey } from '@turnkey/react-wallet-kit'
+import { MainGuest } from '@/components/main/main-guest'
 import MainSidebar from '@/components/main/main-sidebar'
 import Wallets from '@/components/wallets/wallets'
 
 export function Main() {
-  const { user, wallets } = useTurnkey()
+  const { user, wallets, authState } = useTurnkey()
+
+  if (authState !== AuthState.Authenticated) {
+    return <MainGuest />
+  }
 
   const uniqueWallets = useMemo(() => {
     return wallets.map(wallet => {
@@ -23,13 +30,11 @@ export function Main() {
   }, [wallets])
 
   return (
-    <div className="relative isolate min-h-screen w-full bg-white text-neutral-900 antialiased transition-colors duration-300 dark:bg-neutral-950 dark:text-neutral-100">
-      <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-3">
-          {user && <MainSidebar user={user} />}
-          {wallets && <Wallets wallets={uniqueWallets} />}
-        </div>
-      </main>
+    <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="grid gap-8 lg:grid-cols-3">
+        {user && <MainSidebar user={user} />}
+        {wallets && <Wallets wallets={uniqueWallets} />}
+      </div>
     </div>
   )
 }

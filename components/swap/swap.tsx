@@ -36,6 +36,7 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
   const [confirmQuote, setConfirmQuote] = useState<QuoteRoute | null>(null)
   const [isConfirmQuoteLoading, setIsConfirmQuoteLoading] = useState(false)
   const [confirmQuoteError, setConfirmQuoteError] = useState<string | null>(null)
+  const [manualDestinationAddress, setManualDestinationAddress] = useState('')
 
   // Helper to find token case-insensitively
   const findToken = useCallback(
@@ -75,7 +76,8 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
   )
 
   const sourceAddress = fromTokenMeta ? resolveAddressForChain(fromTokenMeta.chain) : null
-  const destinationAddress = toTokenMeta ? resolveAddressForChain(toTokenMeta.chain) : null
+  const resolvedDestinationAddress = toTokenMeta ? resolveAddressForChain(toTokenMeta.chain) : null
+  const destinationAddress = resolvedDestinationAddress || manualDestinationAddress || null
 
   const {
     quote: previewQuote,
@@ -187,6 +189,7 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
   }
 
   const handleFormSubmit = async () => {
+    console.log(' -------------> ', { needsApproval }, fromTokenMeta?.address)
     if (needsApproval && fromTokenMeta?.address) {
       await handleFormApprove()
     } else {
@@ -369,7 +372,7 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md p-4">
+      <DialogContent className="sm:max-w-md p-4 overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Swap Tokens</DialogTitle>
         </DialogHeader>
@@ -389,6 +392,9 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
             onToTokenChange={token => setToToken(token.identifier)}
             onAmountChange={setAmount}
             onSlippageChange={setSlippage}
+            destinationAddress={manualDestinationAddress}
+            resolvedDestinationAddress={resolvedDestinationAddress}
+            onDestinationAddressChange={setManualDestinationAddress}
             onSubmit={handleFormSubmit}
           />
         )}

@@ -14,10 +14,13 @@ type SwapFormProps = {
   isLoading: boolean
   needsApproval: boolean
   error?: string | null
+  destinationAddress: string
+  resolvedDestinationAddress: string | null
   onFromTokenChange: (token: Token) => void
   onToTokenChange: (token: Token) => void
   onAmountChange: (value: string) => void
   onSlippageChange: (value: string) => void
+  onDestinationAddressChange: (value: string) => void
   onSubmit: () => void
 }
 
@@ -31,10 +34,13 @@ export function SwapForm({
   isLoading,
   needsApproval,
   error,
+  destinationAddress,
+  resolvedDestinationAddress,
   onFromTokenChange,
   onToTokenChange,
   onAmountChange,
   onSlippageChange,
+  onDestinationAddressChange,
   onSubmit
 }: SwapFormProps) {
   const { openDialog } = useDialog()
@@ -47,7 +53,7 @@ export function SwapForm({
     return 'Next'
   }
 
-  const isDisabled = !amount || Number(amount) <= 0 || isLoading || !!error || !previewQuote
+  const isDisabled = !fromTokenMeta || !toTokenMeta || !amount || Number(amount) <= 0 || isLoading || !!error || !previewQuote
 
   const openFromTokenSelector = () => {
     openDialog(SwapSelectAsset, {
@@ -64,7 +70,7 @@ export function SwapForm({
   }
 
   return (
-    <div className="space-y-4 overflow-hidden">
+    <div className="space-y-4 overflow-y-auto">
       <div className="space-y-2">
         <label className="text-sm font-medium">From</label>
         <button
@@ -137,6 +143,24 @@ export function SwapForm({
           className="w-full rounded-lg border border-slate-200 px-4 py-2"
         />
       </div>
+
+      {!resolvedDestinationAddress && toTokenMeta && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">
+            Destination Address ({toTokenMeta.chain})
+          </label>
+          <input
+            type="text"
+            placeholder={`Enter ${toTokenMeta.chain} address`}
+            value={destinationAddress}
+            onChange={e => onDestinationAddressChange(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 px-4 py-2 font-mono text-sm"
+          />
+          <p className="text-xs text-slate-500">
+            Your wallet doesn't have a {toTokenMeta.chain} address. Enter one manually.
+          </p>
+        </div>
+      )}
 
       {previewQuote && (
         <div className="rounded-lg bg-blue-50 p-3">

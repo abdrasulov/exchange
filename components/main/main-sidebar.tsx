@@ -1,14 +1,15 @@
 'use client'
 
-import IdentityStatus from '@/components/identity-status'
-import { v1User } from '@turnkey/sdk-types'
 import { useTurnkey } from '@turnkey/react-wallet-kit'
+import { IdentityStatus } from '@/components/identity-status'
+import { BusinessIdentityStatus } from '@/components/business-identity-status'
+import { v1User } from '@turnkey/sdk-types'
 
 interface SidebarProps {
   user: v1User
 }
 
-export default function MainSidebar({ user }: SidebarProps) {
+export function MainSidebar({ user }: SidebarProps) {
   const { logout, deleteSubOrganization } = useTurnkey()
 
   const handleLogout = async () => {
@@ -84,6 +85,7 @@ export default function MainSidebar({ user }: SidebarProps) {
         </div>
       </section>
       <IdentityStatus user={user} />
+      <BusinessIdentityStatus user={user} />
     </div>
   )
 }

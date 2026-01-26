@@ -125,3 +125,18 @@ export async function fetchVerificationStatus(userId: string): Promise<Verificat
   const url = `/api/verification/?userId=${userId}`
   return apiRequest<VerificationResponse>(url)
 }
+
+export type BusinessVerificationResponse = {
+  verified: boolean
+  reviewStatus: string | null
+  reviewResult: {
+    reviewAnswer: string
+    rejectLabels?: string[]
+    reviewRejectType?: string
+  } | null
+}
+
+export async function fetchBusinessVerificationStatus(userId: string): Promise<BusinessVerificationResponse> {
+  const url = `/api/business-verification?userId=${userId}`
+  return apiRequest<BusinessVerificationResponse>(url)
+}

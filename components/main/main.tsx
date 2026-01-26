@@ -3,15 +3,11 @@
 import { useMemo } from 'react'
 import { AuthState, useTurnkey } from '@turnkey/react-wallet-kit'
 import { MainGuest } from '@/components/main/main-guest'
-import MainSidebar from '@/components/main/main-sidebar'
-import Wallets from '@/components/wallets/wallets'
+import { MainSidebar } from '@/components/main/main-sidebar'
+import { Wallets } from '@/components/wallets/wallets'
 
 export function Main() {
   const { user, wallets, authState } = useTurnkey()
-
-  if (authState !== AuthState.Authenticated) {
-    return <MainGuest />
-  }
 
   const uniqueWallets = useMemo(() => {
     return wallets.map(wallet => {
@@ -28,6 +24,10 @@ export function Main() {
       return { ...wallet, accounts: uniqueAccounts }
     })
   }, [wallets])
+
+  if (authState !== AuthState.Authenticated) {
+    return <MainGuest />
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">

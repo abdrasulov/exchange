@@ -14,7 +14,7 @@ interface MainContentProps {
   wallets: Wallet[]
 }
 
-export default function Wallets({ wallets }: MainContentProps) {
+export function Wallets({ wallets }: MainContentProps) {
   const [totalBalance, setTotalBalance] = useState<number>(0)
   const [isLoadingBalance, setIsLoadingBalance] = useState<boolean>(true)
   const [accountBalances, setAccountBalances] = useState<Record<string, BalanceAsset[]>>({})

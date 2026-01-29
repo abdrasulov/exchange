@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ethers } from 'ethers'
 import { useTurnkey } from '@turnkey/react-wallet-kit'
-// import { Credenza, CredenzaContent, CredenzaHeader, CredenzaTitle } from '@/components/ui/credenza'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { SwapApproval, SwapConfirm, SwapForm, SwapProgress, SwapSuccess } from '@/components/swap'
 import { fetchBalances, fetchQuote, QuoteRoute } from '@/lib/api'
@@ -90,7 +89,7 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
     slippage: Number(slippage),
     sourceAddress: sourceAddress || undefined,
     destinationAddress: destinationAddress || undefined,
-    providers: ['THORCHAIN'],
+    providers: ['THORCHAIN', 'MAYACHAIN', 'ONEINCH', 'NEAR'],
     dry: true
   })
 
@@ -149,8 +148,12 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
     }
   }, [isOpen])
 
+  useEffect(() => {
+    setConfirmQuoteError(null)
+  }, [fromToken, toToken, amount])
+
   const fetchConfirmQuote = async () => {
-    if (!fromTokenMeta || !toTokenMeta || !destinationAddress) return
+    if (!fromTokenMeta || !toTokenMeta || !destinationAddress || !previewQuote) return
 
     setIsConfirmQuoteLoading(true)
     setConfirmQuoteError(null)
@@ -163,11 +166,11 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
         destinationAddress,
         sourceAddress: sourceAddress || undefined,
         slippage: Number(slippage),
-        providers: ['THORCHAIN'],
+        providers: [previewQuote.providers[0]],
         dry: false
       })
 
-      if (response.providerErrors?.length) {
+      if (!response.routes.length && response.providerErrors?.length) {
         const errorMsg = response.providerErrors[0].error
         throw new Error(typeof errorMsg === 'string' ? errorMsg : 'Quote error')
       }
@@ -189,7 +192,6 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
   }
 
   const handleFormSubmit = async () => {
-    console.log(' -------------> ', { needsApproval }, fromTokenMeta?.address)
     if (needsApproval && fromTokenMeta?.address) {
       await handleFormApprove()
     } else {

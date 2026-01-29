@@ -57,6 +57,7 @@ export async function fetchTokens(provider: string = 'THORCHAIN'): Promise<Token
 export type QuoteRoute = {
   expectedBuyAmount: string
   estimatedTime: { total: number }
+  providers: string[]
   tx?: {
     to?: string
     value?: string

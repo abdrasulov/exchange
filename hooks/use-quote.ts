@@ -1,5 +1,5 @@
 import { RefetchOptions, useQuery } from '@tanstack/react-query'
-import { fetchQuote, QuoteRoute, QuoteResponse } from '@/lib/api'
+import { fetchQuote, QuoteResponse, QuoteRoute } from '@/lib/api'
 
 type QuoteParams = {
   sellAsset?: string
@@ -28,7 +28,7 @@ export const useQuote = (params: QuoteParams): UseQuoteResult => {
     slippage,
     sourceAddress,
     destinationAddress,
-    providers = ['THORCHAIN'],
+    providers = ['THORCHAIN', 'MAYACHAIN', 'ONEINCH', 'NEAR'],
     dry = true
   } = params
 
@@ -44,21 +44,9 @@ export const useQuote = (params: QuoteParams): UseQuoteResult => {
     dry
   ]
 
-  const isEnabled = !!(
-    sellAsset &&
-    buyAsset &&
-    sellAmount &&
-    Number(sellAmount) > 0 &&
-    (dry || destinationAddress)
-  )
+  const isEnabled = !!(sellAsset && buyAsset && sellAmount && Number(sellAmount) > 0 && (dry || destinationAddress))
 
-  const {
-    data,
-    refetch,
-    isLoading,
-    isRefetching,
-    error
-  } = useQuery({
+  const { data, refetch, isLoading, isRefetching, error } = useQuery({
     queryKey,
     queryFn: async ({ signal }) => {
       if (!sellAsset || !buyAsset || !sellAmount) {
@@ -82,7 +70,7 @@ export const useQuote = (params: QuoteParams): UseQuoteResult => {
         signal
       )
 
-      if (response.providerErrors?.length) {
+      if (!response.routes.length && response.providerErrors?.length) {
         const errorMsg = response.providerErrors[0].error
         throw new Error(typeof errorMsg === 'string' ? errorMsg : 'Quote error')
       }
@@ -102,7 +90,7 @@ export const useQuote = (params: QuoteParams): UseQuoteResult => {
   return {
     isLoading: isLoading || isRefetching,
     refetch,
-    quote: isLoading || isRefetching || error ? undefined : data?.bestRoute ?? undefined,
+    quote: isLoading || isRefetching || error ? undefined : (data?.bestRoute ?? undefined),
     quoteResponse: data?.response,
     error: error as Error | null
   }

@@ -1,7 +1,6 @@
 'use client'
 
 import { useTurnkey } from '@turnkey/react-wallet-kit'
-import { IdentityStatus } from '@/components/identity-status'
 import { BusinessIdentityStatus } from '@/components/business-identity-status'
 import { v1User } from '@turnkey/sdk-types'
 
@@ -84,7 +83,6 @@ export function MainSidebar({ user }: SidebarProps) {
           </button>
         </div>
       </section>
-      <IdentityStatus user={user} />
       <BusinessIdentityStatus user={user} />
     </div>
   )

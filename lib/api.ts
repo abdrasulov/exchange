@@ -128,12 +128,6 @@ export async function fetchVerificationStatus(userId: string): Promise<Verificat
 
 export type BusinessVerificationResponse = {
   verified: boolean
-  reviewStatus: string | null
-  reviewResult: {
-    reviewAnswer: string
-    rejectLabels?: string[]
-    reviewRejectType?: string
-  } | null
 }
 
 export async function fetchBusinessVerificationStatus(userId: string): Promise<BusinessVerificationResponse> {

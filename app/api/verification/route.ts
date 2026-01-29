@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const response = await axios(getApplicantData(userId))
-    console.log('response', response.data)
+    console.log('verification response', response.data)
 
     verified = response.data.review.reviewStatus == 'completed'
   } catch (err: any) {

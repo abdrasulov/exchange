@@ -1,9 +1,10 @@
 'use client'
 
-import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { v1User } from '@turnkey/sdk-types'
-import { BusinessVerificationResponse, fetchBusinessVerificationStatus } from '@/lib/api'
+import { fetchBusinessVerificationStatus } from '@/lib/api'
+import { useBusinessVerificationStore } from '@/stores/business-verification-store'
+import { BusinessVerificationModal } from '@/components/business-verification-modal'
 
 interface BusinessIdentityStatusProps {
   user: v1User
@@ -104,11 +105,11 @@ function Pending({ reviewStatus }: PendingProps) {
 }
 
 interface RejectedProps {
-  userId: string
+  onRetry: () => void
   rejectLabels?: string[]
 }
 
-function Rejected({ userId, rejectLabels }: RejectedProps) {
+function Rejected({ onRetry, rejectLabels }: RejectedProps) {
   return (
     <section className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white/60 shadow-sm backdrop-blur-xl transition-all hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/40">
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-neutral-50/50 to-transparent dark:from-neutral-800/20"></div>
@@ -133,13 +134,12 @@ function Rejected({ userId, rejectLabels }: RejectedProps) {
           Your business verification was not approved. Please try again with correct documents.
         </p>
         <div className="mt-8 space-y-3">
-          <Link
-            target="_blank"
-            href={`/verify-business?userId=${userId}`}
+          <button
+            onClick={onRetry}
             className="flex w-full items-center justify-center rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 shadow-sm transition-all hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
           >
             Retry KYB Verification
-          </Link>
+          </button>
         </div>
       </div>
     </section>
@@ -147,10 +147,10 @@ function Rejected({ userId, rejectLabels }: RejectedProps) {
 }
 
 interface NonVerifiedProps {
-  userId: string
+  onStartVerification: () => void
 }
 
-function NonVerified({ userId }: NonVerifiedProps) {
+function NonVerified({ onStartVerification }: NonVerifiedProps) {
   return (
     <section className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white/60 shadow-sm backdrop-blur-xl transition-all hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/40">
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-neutral-50/50 to-transparent dark:from-neutral-800/20"></div>
@@ -215,13 +215,12 @@ function NonVerified({ userId }: NonVerifiedProps) {
 
         <p className="text-sm text-neutral-600 dark:text-neutral-400">Your business has not been verified yet.</p>
         <div className="mt-8 space-y-3">
-          <Link
-            target="_blank"
-            href={`/verify-business?userId=${userId}`}
+          <button
+            onClick={onStartVerification}
             className="flex w-full items-center justify-center rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 shadow-sm transition-all hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
           >
             Complete KYB
-          </Link>
+          </button>
         </div>
       </div>
     </section>
@@ -262,45 +261,44 @@ function StatusLoading() {
 }
 
 export function BusinessIdentityStatus({ user }: BusinessIdentityStatusProps) {
-  const [status, setStatus] = useState<BusinessVerificationResponse | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { status, reviewResult, isLoading, openModal, setStatus, setReviewResult, setIsLoading } =
+    useBusinessVerificationStore()
 
+  // Fetch initial status
   useEffect(() => {
     fetchBusinessVerificationStatus(user.userId)
       .then(response => {
-        setStatus(response)
-        setLoading(false)
+        if (response.verified) {
+          setStatus('verified')
+        } else {
+          setStatus('idle')
+        }
       })
       .catch(error => {
         console.error(error)
-        setStatus({ verified: false, reviewStatus: null, reviewResult: null })
-        setLoading(false)
+        setStatus('idle')
       })
-  }, [user.userId])
+      .finally(() => {
+        setIsLoading(false)
+      })
+  }, [user.userId, setStatus, setIsLoading])
 
-  if (loading) {
-    return <StatusLoading />
+  if (isLoading) {
+    return (
+      <>
+        <StatusLoading />
+        <BusinessVerificationModal userId={user.userId} />
+      </>
+    )
   }
 
-  if (!status) {
-    return <NonVerified userId={user.userId} />
-  }
-
-  // Verified
-  if (status.verified) {
-    return <Verified />
-  }
-
-  // Rejected
-  if (status.reviewResult?.reviewAnswer === 'RED') {
-    return <Rejected userId={user.userId} rejectLabels={status.reviewResult.rejectLabels} />
-  }
-
-  // Pending review
-  if (status.reviewStatus === 'pending' || status.reviewStatus === 'queued' || status.reviewStatus === 'onHold') {
-    return <Pending reviewStatus={status.reviewStatus} />
-  }
-
-  // Not started
-  return <NonVerified userId={user.userId} />
+  return (
+    <>
+      {status === 'verified' && <Verified />}
+      {status === 'rejected' && <Rejected onRetry={openModal} rejectLabels={reviewResult?.rejectLabels} />}
+      {status === 'pending' && <Pending reviewStatus="pending" />}
+      {status === 'idle' && <NonVerified onStartVerification={openModal} />}
+      <BusinessVerificationModal userId={user.userId} />
+    </>
+  )
 }

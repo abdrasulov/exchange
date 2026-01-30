@@ -58,12 +58,14 @@ export type QuoteRoute = {
   expectedBuyAmount: string
   estimatedTime: { total: number }
   providers: string[]
-  tx?: {
-    to?: string
-    value?: string
-    data?: string
-    gasPrice?: string
-  }
+  tx?:
+    | string
+    | {
+        to?: string
+        value?: string
+        data?: string
+        gasPrice?: string
+      }
   targetAddress?: string
   inboundAddress?: string
   memo?: string
@@ -83,6 +85,7 @@ export type QuoteRequest = {
   sellAmount: string
   destinationAddress?: string
   sourceAddress?: string
+  refundAddress?: string
   slippage: number
   providers: string[]
   dry: boolean

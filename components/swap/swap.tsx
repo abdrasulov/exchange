@@ -8,6 +8,7 @@ import { SwapApproval, SwapConfirm, SwapForm, SwapProgress, SwapSuccess } from '
 import { fetchBalances, fetchQuote, QuoteRoute } from '@/lib/api'
 import { createApprovalTransaction } from '@/lib/erc20'
 import { chainAddressFormats, rpcUrls } from '@/lib/chains'
+import { createBtcSwapPsbt, fetchUtxos } from '@/lib/bitcoin'
 import { useQuote } from '@/hooks/use-quote'
 import { useSimulation } from '@/hooks/use-simulation'
 import { useTokens } from '@/hooks/use-tokens'
@@ -89,6 +90,7 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
     slippage: Number(slippage),
     sourceAddress: sourceAddress || undefined,
     destinationAddress: destinationAddress || undefined,
+    refundAddress: sourceAddress || undefined,
     providers: ['THORCHAIN', 'MAYACHAIN', 'ONEINCH', 'NEAR'],
     dry: true
   })
@@ -165,6 +167,7 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
         sellAmount: amount,
         destinationAddress,
         sourceAddress: sourceAddress || undefined,
+        refundAddress: sourceAddress || undefined,
         slippage: Number(slippage),
         providers: [previewQuote.providers[0]],
         dry: false
@@ -308,12 +311,91 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
   const executeSwap = async () => {
     if (!fromTokenMeta || !toTokenMeta || !confirmQuote) return
 
-    if (confirmQuote.tx) {
+    if (fromTokenMeta.chain === 'BTC') {
+      // Bitcoin swap
+      const walletAccount = resolveAccountForChain('BTC')
+      const address = resolveAddressForChain('BTC')
+      const inboundAddress = confirmQuote.targetAddress || confirmQuote.inboundAddress
+
+      if (!walletAccount || !address) {
+        return setStatus('BTC wallet not configured')
+      }
+      if (!inboundAddress || !confirmQuote.memo) {
+        return setStatus('Swap route missing inbound address or memo')
+      }
+
+      setSwapStep('swapping')
+      setStatus('Preparing Bitcoin transaction...')
+
+      try {
+        // Fetch UTXOs for the BTC address
+        const utxos = await fetchUtxos(address)
+        if (utxos.length === 0) {
+          throw new Error('No UTXOs available')
+        }
+
+        // Create PSBT with memo
+        const psbtBase64 = createBtcSwapPsbt({
+          fromAddress: address,
+          toAddress: inboundAddress,
+          amount,
+          memo: confirmQuote.memo,
+          utxos
+        })
+
+        // Sign and broadcast via Turnkey
+        const hash = await signAndSendTransaction({
+          unsignedTransaction: psbtBase64,
+          transactionType: 'TRANSACTION_TYPE_BITCOIN' as any,
+          walletAccount
+        })
+
+        setSwapTxHash(hash)
+        setSwapStep('success')
+        setTimeout(() => onOpenChange(false), 3000)
+      } catch (error) {
+        setStatus(`Swap failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        setSwapStep('confirm')
+      }
+    } else if (fromTokenMeta.chain === 'SOL') {
+      // Solana swap - quote returns a pre-built tx string
+      const walletAccount = resolveAccountForChain('SOL')
+      if (!walletAccount) {
+        return setStatus('SOL wallet not configured')
+      }
+      if (typeof confirmQuote.tx !== 'string') {
+        return setStatus('Swap route missing transaction data')
+      }
+
+      setSwapStep('swapping')
+      setStatus('Submitting swap...')
+
+      try {
+        const txBytes = Uint8Array.from(atob(confirmQuote.tx), c => c.charCodeAt(0))
+        const unsignedTransaction = Array.from(txBytes)
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('')
+
+        const hash = await signAndSendTransaction({
+          unsignedTransaction,
+          transactionType: 'TRANSACTION_TYPE_SOLANA',
+          walletAccount,
+          rpcUrl: 'https://solana-rpc.publicnode.com'
+        })
+
+        setSwapTxHash(hash)
+        setSwapStep('success')
+        setTimeout(() => onOpenChange(false), 3000)
+      } catch (error) {
+        setStatus(`Swap failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        setSwapStep('confirm')
+      }
+    } else if (typeof confirmQuote.tx === 'object' && confirmQuote.tx) {
+      // EVM chains
       const walletAccount = resolveAccountForChain(fromTokenMeta.chain)
       const rpcUrl = rpcUrls[fromTokenMeta.chain]
       if (!walletAccount || !rpcUrl) {
-        setStatus('Wallet or RPC not configured')
-        return
+        return setStatus('Wallet or RPC not configured')
       }
 
       setSwapStep('swapping')
@@ -374,7 +456,7 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md p-4 overflow-y-auto">
+      <DialogContent className="overflow-y-auto p-4 sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Swap Tokens</DialogTitle>
         </DialogHeader>

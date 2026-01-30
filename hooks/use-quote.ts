@@ -8,6 +8,7 @@ type QuoteParams = {
   slippage: number
   sourceAddress?: string
   destinationAddress?: string
+  refundAddress?: string
   providers?: string[]
   dry?: boolean
 }
@@ -28,6 +29,7 @@ export const useQuote = (params: QuoteParams): UseQuoteResult => {
     slippage,
     sourceAddress,
     destinationAddress,
+    refundAddress,
     providers = ['THORCHAIN', 'MAYACHAIN', 'ONEINCH', 'NEAR'],
     dry = true
   } = params
@@ -63,6 +65,7 @@ export const useQuote = (params: QuoteParams): UseQuoteResult => {
           sellAmount,
           destinationAddress,
           sourceAddress,
+          refundAddress,
           slippage,
           providers,
           dry

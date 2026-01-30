@@ -202,8 +202,8 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
     }
   }
 
-  const handleFormApprove = async () => {
-    if (!fromTokenMeta?.address || !approveData) return
+  const sendApproval = async () => {
+    if (!fromTokenMeta?.address || !approveData) return null
 
     const walletAccount = resolveAccountForChain(fromTokenMeta.chain)
     const rpcUrl = rpcUrls[fromTokenMeta.chain]
@@ -211,39 +211,46 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
 
     if (!walletAccount || !rpcUrl || !address) {
       setStatus('Wallet or RPC not configured')
-      return
+      return null
     }
 
     setSwapStep('approving')
     setStatus(null)
 
+    const provider = new ethers.JsonRpcProvider(rpcUrl)
+    const nonce = await provider.getTransactionCount(address, 'latest')
+    const feeData = await provider.getFeeData()
+
+    const { unsignedTransaction } = createApprovalTransaction(
+      fromTokenMeta.address,
+      approveData.spender,
+      amount,
+      fromTokenMeta.decimals,
+      address,
+      Number(fromTokenMeta.chainId),
+      nonce,
+      feeData
+    )
+
+    const hash = await signAndSendTransaction({
+      unsignedTransaction,
+      transactionType: 'TRANSACTION_TYPE_ETHEREUM',
+      walletAccount,
+      rpcUrl
+    })
+
+    setApprovalTxHash(hash)
+    await provider.waitForTransaction(hash)
+    return hash
+  }
+
+  const handleFormApprove = async () => {
     try {
-      const provider = new ethers.JsonRpcProvider(rpcUrl)
-      const nonce = await provider.getTransactionCount(address, 'latest')
-      const feeData = await provider.getFeeData()
-
-      const { unsignedTransaction } = createApprovalTransaction(
-        fromTokenMeta.address,
-        approveData.spender,
-        amount,
-        fromTokenMeta.decimals,
-        address,
-        Number(fromTokenMeta.chainId),
-        nonce,
-        feeData
-      )
-
-      const hash = await signAndSendTransaction({
-        unsignedTransaction,
-        transactionType: 'TRANSACTION_TYPE_ETHEREUM',
-        walletAccount,
-        rpcUrl
-      })
-
-      setApprovalTxHash(hash)
-      await provider.waitForTransaction(hash)
-      refetchSimulation()
-      setSwapStep('form')
+      const hash = await sendApproval()
+      if (hash) {
+        refetchSimulation()
+        setSwapStep('form')
+      }
     } catch (error) {
       setStatus(`Approval failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
       setSwapStep('form')
@@ -262,46 +269,9 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
   }
 
   const handleApprovalSubmit = async () => {
-    if (!fromTokenMeta?.address || !approveData) return
-
-    const walletAccount = resolveAccountForChain(fromTokenMeta.chain)
-    const rpcUrl = rpcUrls[fromTokenMeta.chain]
-    const address = resolveAddressForChain(fromTokenMeta.chain)
-
-    if (!walletAccount || !rpcUrl || !address) {
-      setStatus('Wallet or RPC not configured')
-      return
-    }
-
-    setSwapStep('approving')
-    setStatus(null)
-
     try {
-      const provider = new ethers.JsonRpcProvider(rpcUrl)
-      const nonce = await provider.getTransactionCount(address, 'latest')
-      const feeData = await provider.getFeeData()
-
-      const { unsignedTransaction } = createApprovalTransaction(
-        fromTokenMeta.address,
-        approveData.spender,
-        amount,
-        fromTokenMeta.decimals,
-        address,
-        Number(fromTokenMeta.chainId),
-        nonce,
-        feeData
-      )
-
-      const hash = await signAndSendTransaction({
-        unsignedTransaction,
-        transactionType: 'TRANSACTION_TYPE_ETHEREUM',
-        walletAccount,
-        rpcUrl
-      })
-
-      setApprovalTxHash(hash)
-      await provider.waitForTransaction(hash)
-      await executeSwap()
+      const hash = await sendApproval()
+      if (hash) await executeSwap()
     } catch (error) {
       setStatus(`Approval failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
       setSwapStep('approve')
@@ -353,23 +323,16 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
         setSwapStep('confirm')
       }
     } else if (fromTokenMeta.chain === 'SOL') {
-      // Solana swap - quote returns a pre-built tx string
       const walletAccount = resolveAccountForChain('SOL')
-      if (!walletAccount) {
-        return setStatus('SOL wallet not configured')
-      }
-      if (typeof confirmQuote.tx !== 'string') {
-        return setStatus('Swap route missing transaction data')
-      }
+      if (!walletAccount) return setStatus('SOL wallet not configured')
+      if (typeof confirmQuote.tx !== 'string') return setStatus('Swap route missing transaction data')
 
       setSwapStep('swapping')
       setStatus('Submitting swap...')
 
       try {
         const txBytes = Uint8Array.from(atob(confirmQuote.tx), c => c.charCodeAt(0))
-        const unsignedTransaction = Array.from(txBytes)
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join('')
+        const unsignedTransaction = Array.from(txBytes, b => b.toString(16).padStart(2, '0')).join('')
 
         const hash = await signAndSendTransaction({
           unsignedTransaction,
@@ -441,9 +404,7 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
         setSwapStep('confirm')
       }
     } else {
-      setStatus(
-        `Send ${amount} ${fromTokenMeta.ticker} to ${confirmQuote.targetAddress || confirmQuote.inboundAddress || 'N/A'} with memo: ${confirmQuote.memo || 'N/A'}`
-      )
+      setStatus(`Swapping from ${fromTokenMeta.chain} is not supported yet`)
     }
   }
 

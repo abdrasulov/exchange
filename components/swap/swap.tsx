@@ -7,8 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { SwapApproval, SwapConfirm, SwapForm, SwapProgress, SwapSuccess } from '@/components/swap'
 import { fetchBalances, fetchQuote, QuoteRoute } from '@/lib/api'
 import { createApprovalTransaction } from '@/lib/erc20'
+import { signPsbtWithExternalSigner } from '@/lib/bitcoin'
 import { chainAddressFormats, rpcUrls } from '@/lib/chains'
-import { createBtcSwapPsbt, fetchUtxos } from '@/lib/bitcoin'
 import { useQuote } from '@/hooks/use-quote'
 import { useSimulation } from '@/hooks/use-simulation'
 import { useTokens } from '@/hooks/use-tokens'
@@ -21,7 +21,7 @@ type SwapProps = {
 }
 
 export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
-  const { wallets, signAndSendTransaction } = useTurnkey()
+  const { wallets, signAndSendTransaction, httpClient } = useTurnkey()
   const { tokens } = useTokens()
 
   const [fromToken, setFromToken] = useState<string>('')
@@ -312,45 +312,40 @@ export function Swap({ isOpen, onOpenChange, sellAsset }: SwapProps) {
     if (!fromTokenMeta || !toTokenMeta || !confirmQuote) return
 
     if (fromTokenMeta.chain === 'BTC') {
-      // Bitcoin swap
       const walletAccount = resolveAccountForChain('BTC')
-      const address = resolveAddressForChain('BTC')
-      const inboundAddress = confirmQuote.targetAddress || confirmQuote.inboundAddress
-
-      if (!walletAccount || !address) {
-        return setStatus('BTC wallet not configured')
-      }
-      if (!inboundAddress || !confirmQuote.memo) {
-        return setStatus('Swap route missing inbound address or memo')
-      }
+      if (!walletAccount) return setStatus('BTC wallet not configured')
+      if (!httpClient) return setStatus('Turnkey client not initialized')
+      if (typeof confirmQuote.tx !== 'string') return setStatus('Swap route missing transaction data')
 
       setSwapStep('swapping')
-      setStatus('Preparing Bitcoin transaction...')
+      setStatus('Submitting swap...')
 
       try {
-        // Fetch UTXOs for the BTC address
-        const utxos = await fetchUtxos(address)
-        if (utxos.length === 0) {
-          throw new Error('No UTXOs available')
+        const signFn = async (sighashHex: string) => {
+          const result = await httpClient.signRawPayload({
+            signWith: walletAccount.address,
+            payload: sighashHex,
+            encoding: 'PAYLOAD_ENCODING_HEXADECIMAL' as any,
+            hashFunction: 'HASH_FUNCTION_NO_OP' as any
+          })
+          return { r: result.r, s: result.s, v: result.v }
         }
 
-        // Create PSBT with memo
-        const psbtBase64 = createBtcSwapPsbt({
-          fromAddress: address,
-          toAddress: inboundAddress,
-          amount,
-          memo: confirmQuote.memo,
-          utxos
+        const signedTxHex = await signPsbtWithExternalSigner(confirmQuote.tx, signFn)
+
+        const broadcastRes = await fetch('https://mempool.space/api/tx', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: signedTxHex
         })
 
-        // Sign and broadcast via Turnkey
-        const hash = await signAndSendTransaction({
-          unsignedTransaction: psbtBase64,
-          transactionType: 'TRANSACTION_TYPE_BITCOIN' as any,
-          walletAccount
-        })
+        if (!broadcastRes.ok) {
+          const errText = await broadcastRes.text()
+          throw new Error(`Broadcast failed: ${errText}`)
+        }
 
-        setSwapTxHash(hash)
+        const txid = await broadcastRes.text()
+        setSwapTxHash(txid)
         setSwapStep('success')
         setTimeout(() => onOpenChange(false), 3000)
       } catch (error) {
